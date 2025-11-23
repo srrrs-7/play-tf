@@ -21,3 +21,7 @@ override.tf.json
 # CLI configuration files
 .terraformrc
 terraform.rc
+
+# dev container
+setup.personal.sh
+compose.override.yaml

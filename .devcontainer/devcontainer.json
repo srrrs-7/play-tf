@@ -1,0 +1,39 @@
+// Strategy
+// - Use Dev Container Features if possible
+// - Use docker-compose to launch services
+// - Use Dockerfile if it needs to be cached
+// - Use setup.sh to run commands that don't need to be cached
+// - Use setup.personal.sh for personal setup such as dotfiles
+{
+  "name": "play-tf",
+  "dockerComposeFile": [
+    "compose.yaml",
+    "compose.override.yaml"
+  ],
+  "service": "dev",
+  "workspaceFolder": "/workspace/main",
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/terraform:1": {},
+    "ghcr.io/devcontainers/features/aws-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "streetsidesoftware.code-spell-checker",
+        // terraform
+        "hashicorp.terraform",
+        "hashicorp.terraform-docs",
+        // aws
+        "amazonwebservices.aws-toolkit-vscode"
+      ],
+      "settings": {
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "postCreateCommand": "chmod +x .devcontainer/setup.sh && .devcontainer/setup.sh",
+  "forwardPorts": []
+}
