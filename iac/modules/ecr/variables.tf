@@ -7,6 +7,11 @@ variable "image_tag_mutability" {
   description = "Image tag mutability (MUTABLE or IMMUTABLE)"
   type        = string
   default     = "MUTABLE"
+
+  validation {
+    condition     = contains(["MUTABLE", "IMMUTABLE"], var.image_tag_mutability)
+    error_message = "image_tag_mutability must be either MUTABLE or IMMUTABLE."
+  }
 }
 
 variable "force_delete" {
@@ -25,6 +30,11 @@ variable "encryption_type" {
   description = "Encryption type (AES256 or KMS)"
   type        = string
   default     = "AES256"
+
+  validation {
+    condition     = contains(["AES256", "KMS"], var.encryption_type)
+    error_message = "encryption_type must be either AES256 or KMS."
+  }
 }
 
 variable "kms_key_arn" {
@@ -87,7 +97,7 @@ variable "replication_configuration" {
 }
 
 variable "tags" {
-  description = "Tags to apply to resources"
+  description = "A map of tags to assign to the resource"
   type        = map(string)
   default     = {}
 }

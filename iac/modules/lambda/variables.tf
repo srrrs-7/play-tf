@@ -28,12 +28,22 @@ variable "timeout" {
   description = "タイムアウト秒数"
   type        = number
   default     = 30
+
+  validation {
+    condition     = var.timeout >= 1 && var.timeout <= 900
+    error_message = "Timeout must be between 1 and 900 seconds."
+  }
 }
 
 variable "memory_size" {
   description = "メモリサイズ (MB)"
   type        = number
   default     = 128
+
+  validation {
+    condition     = var.memory_size >= 128 && var.memory_size <= 10240
+    error_message = "Memory size must be between 128 and 10240 MB."
+  }
 }
 
 variable "environment_variables" {
@@ -67,6 +77,11 @@ variable "architectures" {
   description = "アーキテクチャ ([\"x86_64\"] or [\"arm64\"])"
   type        = list(string)
   default     = ["x86_64"]
+
+  validation {
+    condition     = alltrue([for arch in var.architectures : contains(["x86_64", "arm64"], arch)])
+    error_message = "Architectures must be either x86_64 or arm64."
+  }
 }
 
 variable "create_log_group" {
@@ -92,7 +107,7 @@ variable "policy_statements" {
 }
 
 variable "tags" {
-  description = "リソースに付与するタグ"
+  description = "A map of tags to assign to the resource"
   type        = map(string)
   default     = {}
 }

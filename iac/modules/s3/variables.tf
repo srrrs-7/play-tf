@@ -74,7 +74,7 @@ variable "logging_target_prefix" {
 }
 
 variable "tags" {
-  description = "Additional tags for the bucket"
+  description = "A map of tags to assign to the resource"
   type        = map(string)
   default     = {}
 }

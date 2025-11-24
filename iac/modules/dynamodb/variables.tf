@@ -7,6 +7,11 @@ variable "billing_mode" {
   description = "Controls how you are charged for read and write throughput and how you manage capacity"
   type        = string
   default     = "PAY_PER_REQUEST"
+
+  validation {
+    condition     = contains(["PAY_PER_REQUEST", "PROVISIONED"], var.billing_mode)
+    error_message = "billing_mode must be either PAY_PER_REQUEST or PROVISIONED."
+  }
 }
 
 variable "read_capacity" {
@@ -93,10 +98,15 @@ variable "stream_view_type" {
   description = "When an item in the table is modified, StreamViewType determines what information is written to the table's stream"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.stream_view_type == null || contains(["KEYS_ONLY", "NEW_IMAGE", "OLD_IMAGE", "NEW_AND_OLD_IMAGES"], var.stream_view_type)
+    error_message = "stream_view_type must be one of: KEYS_ONLY, NEW_IMAGE, OLD_IMAGE, NEW_AND_OLD_IMAGES."
+  }
 }
 
 variable "tags" {
-  description = "A mapping of tags to assign to the resource"
+  description = "A map of tags to assign to the resource"
   type        = map(string)
   default     = {}
 }

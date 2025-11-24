@@ -1,10 +1,20 @@
+output "id" {
+  description = "The ID of the Lambda function"
+  value       = aws_lambda_function.main.id
+}
+
+output "arn" {
+  description = "The ARN of the Lambda function"
+  value       = aws_lambda_function.main.arn
+}
+
 output "function_name" {
-  description = "Lambda関数名"
+  description = "The name of the Lambda function"
   value       = aws_lambda_function.main.function_name
 }
 
 output "function_arn" {
-  description = "Lambda関数のARN"
+  description = "The ARN of the Lambda function (deprecated, use 'arn' instead)"
   value       = aws_lambda_function.main.arn
 }
 

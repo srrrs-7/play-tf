@@ -49,6 +49,11 @@ variable "fifo_queue" {
   description = "Boolean designating a FIFO queue"
   type        = bool
   default     = false
+
+  validation {
+    condition     = !var.fifo_queue || can(regex("\\.fifo$", var.name))
+    error_message = "FIFO queue names must end with .fifo suffix."
+  }
 }
 
 variable "content_based_deduplication" {
@@ -61,12 +66,22 @@ variable "deduplication_scope" {
   description = "Specifies whether message deduplication occurs at the message group or queue level"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.deduplication_scope == null || contains(["messageGroup", "queue"], var.deduplication_scope)
+    error_message = "deduplication_scope must be either messageGroup or queue."
+  }
 }
 
 variable "fifo_throughput_limit" {
   description = "Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.fifo_throughput_limit == null || contains(["perQueue", "perMessageGroupId"], var.fifo_throughput_limit)
+    error_message = "fifo_throughput_limit must be either perQueue or perMessageGroupId."
+  }
 }
 
 variable "kms_master_key_id" {
@@ -82,7 +97,7 @@ variable "kms_data_key_reuse_period_seconds" {
 }
 
 variable "tags" {
-  description = "A mapping of tags to assign to the queue"
+  description = "A map of tags to assign to the resource"
   type        = map(string)
   default     = {}
 }

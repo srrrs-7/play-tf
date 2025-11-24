@@ -42,6 +42,11 @@ variable "network_mode" {
   description = "Docker networking mode to use for the containers in the task"
   type        = string
   default     = "awsvpc"
+
+  validation {
+    condition     = contains(["none", "bridge", "awsvpc", "host"], var.network_mode)
+    error_message = "network_mode must be one of: none, bridge, awsvpc, host."
+  }
 }
 
 variable "cpu" {
@@ -72,12 +77,22 @@ variable "operating_system_family" {
   description = "OS family"
   type        = string
   default     = "LINUX"
+
+  validation {
+    condition     = contains(["LINUX", "WINDOWS_SERVER_2019_FULL", "WINDOWS_SERVER_2019_CORE", "WINDOWS_SERVER_2022_FULL", "WINDOWS_SERVER_2022_CORE"], var.operating_system_family)
+    error_message = "operating_system_family must be a valid AWS ECS OS family."
+  }
 }
 
 variable "cpu_architecture" {
   description = "CPU architecture"
   type        = string
   default     = "X86_64"
+
+  validation {
+    condition     = contains(["X86_64", "ARM64"], var.cpu_architecture)
+    error_message = "cpu_architecture must be either X86_64 or ARM64."
+  }
 }
 
 variable "desired_count" {
@@ -145,7 +160,7 @@ variable "log_retention_days" {
 }
 
 variable "tags" {
-  description = "Tags to apply to resources"
+  description = "A map of tags to assign to the resource"
   type        = map(string)
   default     = {}
 }
