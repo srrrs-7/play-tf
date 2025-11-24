@@ -18,5 +18,7 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install Python 3.12 using uv
-RUN /home/vscode/.local/bin/uv python install 3.12
+# install Bun
+ENV BUN_INSTALL="/home/vscode/.bun"
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+RUN curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.3"

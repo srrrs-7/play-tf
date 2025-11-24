@@ -10,6 +10,9 @@ whoami
 alias tf="terraform" >> ~/.bashrc
 source ~/.bashrc
 
+# install gemini cli
+npm install -g @google/gemini-cli
+
 # init and execute personal setup script
 if [ ! -f ".devcontainer/setup.personal.sh" ]; then
   cat << 'EOF' > .devcontainer/setup.personal.sh
