@@ -7,7 +7,7 @@ export AWS_SECRET_ACCESS_KEY="your-secret-key"
 export AWS_DEFAULT_REGION="ap-northeast-1"
 
 ## 環境設定
-cd environments/*
+cd iac/environments/*
 
 ## 初期化
 terraform init
