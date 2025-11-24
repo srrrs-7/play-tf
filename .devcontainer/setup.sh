@@ -6,10 +6,6 @@ echo "🚀 Starting Dev Container setup..."
 echo "👤 Current user:"
 whoami
 
-# alias terraform to tf
-alias tf="terraform" >> ~/.bashrc
-source ~/.bashrc
-
 # install gemini cli
 npm install -g @google/gemini-cli
 
