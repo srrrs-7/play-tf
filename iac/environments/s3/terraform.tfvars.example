@@ -6,3 +6,13 @@ allowed_origins = [
   "http://localhost:3000",
   "https://dev.example.com"
 ]
+
+# Presigned URL Configuration
+presigned_url_default_expiration = 3600  # 1 hour (max: 604800 = 7 days)
+lambda_log_retention_days        = 7
+
+# API Gateway Configuration
+api_authorization_type   = "NONE"  # or "AWS_IAM", "COGNITO_USER_POOLS"
+api_xray_tracing_enabled = false
+api_cors_allow_origin    = "'*'"   # Change to specific origin in production
+api_log_retention_days   = 7
