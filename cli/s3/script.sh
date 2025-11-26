@@ -28,7 +28,9 @@ usage() {
     echo "  get-object-metadata <bucket-name> <s3-key> - Get object metadata"
     echo "  copy-object <src-bucket> <src-key> <dst-bucket> <dst-key> - Copy object within S3"
     echo "  make-public <bucket-name> <s3-key>  - Make an object publicly accessible"
-    echo "  generate-presigned-url <bucket-name> <s3-key> [expiration] - Generate presigned URL"
+    echo "  generate-presigned-url <bucket-name> <s3-key> [expiration] - Generate presigned URL (GET/download)"
+    echo "  generate-presigned-put-url <bucket-name> <s3-key> [expiration] [content-type] - Generate presigned URL (PUT/upload)"
+    echo "  upload-with-presigned-url <local-file> <presigned-url> [content-type] - Upload file using presigned URL"
     echo ""
     exit 1
 }
@@ -261,7 +263,7 @@ make_public() {
     echo -e "URL: https://$bucket_name.s3.amazonaws.com/$s3_key"
 }
 
-# Generate presigned URL
+# Generate presigned URL (GET/download)
 generate_presigned_url() {
     local bucket_name=$1
     local s3_key=$2
@@ -272,8 +274,112 @@ generate_presigned_url() {
         exit 1
     fi
 
-    echo -e "${GREEN}Generating presigned URL (expires in $expiration seconds)${NC}"
+    echo -e "${GREEN}Generating presigned URL for download (expires in $expiration seconds)${NC}"
     aws s3 presign "s3://$bucket_name/$s3_key" --expires-in "$expiration"
+}
+
+# Generate presigned URL for PUT (upload)
+generate_presigned_put_url() {
+    local bucket_name=$1
+    local s3_key=$2
+    local expiration=${3:-3600}
+    local content_type=${4:-"application/octet-stream"}
+
+    if [ -z "$bucket_name" ] || [ -z "$s3_key" ]; then
+        echo -e "${RED}Error: Bucket name and S3 key are required${NC}"
+        exit 1
+    fi
+
+    # Check if Python3 and boto3 are available
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${RED}Error: python3 is required for generating PUT presigned URLs${NC}"
+        exit 1
+    fi
+
+    if ! python3 -c "import boto3" &> /dev/null; then
+        echo -e "${RED}Error: boto3 is required. Install with: pip3 install boto3${NC}"
+        exit 1
+    fi
+
+    local region=${AWS_DEFAULT_REGION:-ap-northeast-1}
+
+    echo -e "${GREEN}Generating presigned URL for upload (expires in $expiration seconds)${NC}"
+    echo -e "${YELLOW}Content-Type: $content_type${NC}"
+
+    python3 << EOF
+import boto3
+from botocore.config import Config
+
+s3 = boto3.client('s3', region_name='${region}', config=Config(signature_version='s3v4'))
+url = s3.generate_presigned_url(
+    'put_object',
+    Params={
+        'Bucket': '${bucket_name}',
+        'Key': '${s3_key}',
+        'ContentType': '${content_type}'
+    },
+    ExpiresIn=${expiration}
+)
+print(url)
+EOF
+
+    echo ""
+    echo -e "${GREEN}Usage example:${NC}"
+    echo "curl -X PUT -H \"Content-Type: $content_type\" -T <local-file> \"<presigned-url>\""
+}
+
+# Upload file using presigned URL
+upload_with_presigned_url() {
+    local local_file=$1
+    local presigned_url=$2
+    local content_type=${3:-"application/octet-stream"}
+
+    if [ -z "$local_file" ] || [ -z "$presigned_url" ]; then
+        echo -e "${RED}Error: Local file and presigned URL are required${NC}"
+        exit 1
+    fi
+
+    if [ ! -f "$local_file" ]; then
+        echo -e "${RED}Error: File does not exist: $local_file${NC}"
+        exit 1
+    fi
+
+    # Auto-detect content type if not specified
+    if [ "$content_type" = "application/octet-stream" ]; then
+        case "${local_file##*.}" in
+            txt)  content_type="text/plain" ;;
+            html) content_type="text/html" ;;
+            css)  content_type="text/css" ;;
+            js)   content_type="application/javascript" ;;
+            json) content_type="application/json" ;;
+            xml)  content_type="application/xml" ;;
+            pdf)  content_type="application/pdf" ;;
+            zip)  content_type="application/zip" ;;
+            png)  content_type="image/png" ;;
+            jpg|jpeg) content_type="image/jpeg" ;;
+            gif)  content_type="image/gif" ;;
+            svg)  content_type="image/svg+xml" ;;
+            mp4)  content_type="video/mp4" ;;
+            mp3)  content_type="audio/mpeg" ;;
+        esac
+    fi
+
+    echo -e "${GREEN}Uploading $local_file using presigned URL${NC}"
+    echo -e "${YELLOW}Content-Type: $content_type${NC}"
+
+    local http_code
+    http_code=$(curl -s -w "%{http_code}" -X PUT \
+        -H "Content-Type: $content_type" \
+        -T "$local_file" \
+        "$presigned_url" \
+        -o /dev/null)
+
+    if [ "$http_code" = "200" ]; then
+        echo -e "${GREEN}Upload completed successfully (HTTP $http_code)${NC}"
+    else
+        echo -e "${RED}Upload failed (HTTP $http_code)${NC}"
+        exit 1
+    fi
 }
 
 # Main script logic
@@ -323,6 +429,12 @@ case $COMMAND in
         ;;
     generate-presigned-url)
         generate_presigned_url "$@"
+        ;;
+    generate-presigned-put-url)
+        generate_presigned_put_url "$@"
+        ;;
+    upload-with-presigned-url)
+        upload_with_presigned_url "$@"
         ;;
     *)
         echo -e "${RED}Unknown command: $COMMAND${NC}"
