@@ -60,11 +60,14 @@ When testing changes to a specific module or environment:
 
 ```
 iac/
-├── modules/           # Reusable Terraform modules (18 modules)
+├── modules/           # Reusable Terraform modules (27 modules)
 │   ├── alb/           # Application Load Balancer
+│   ├── amplify/       # AWS Amplify
 │   ├── apigateway/    # API Gateway REST API
 │   ├── apprunner/     # AWS App Runner
+│   ├── appsync/       # AWS AppSync GraphQL
 │   ├── aurora/        # Aurora Serverless
+│   ├── batch/         # AWS Batch
 │   ├── cloudfront/    # CloudFront distribution
 │   ├── dynamodb/      # DynamoDB table
 │   ├── ec2/           # EC2 instances
@@ -73,9 +76,15 @@ iac/
 │   ├── eks/           # Elastic Kubernetes Service
 │   ├── elasticbeanstalk/  # Elastic Beanstalk
 │   ├── eventbridge/   # EventBridge rules
+│   ├── glue/          # AWS Glue ETL
+│   ├── kinesis/       # Kinesis Data Streams
 │   ├── lambda/        # Lambda functions
+│   ├── msk/           # Managed Streaming for Kafka
 │   ├── rds/           # RDS instances
+│   ├── rds-proxy/     # RDS Proxy
 │   ├── s3/            # S3 buckets
+│   ├── scheduler/     # EventBridge Scheduler
+│   ├── sns/           # Simple Notification Service
 │   ├── sqs/           # SQS queues
 │   ├── step_functions/ # Step Functions
 │   ├── vpc/           # VPC networking
@@ -89,7 +98,7 @@ iac/
     └── api/           # API Gateway + Lambda + DynamoDB
         └── api-handler/          # TypeScript Lambda for DynamoDB CRUD
 
-cli/                   # AWS CLI operation scripts (27 scripts)
+cli/                   # AWS CLI operation scripts (50 scripts)
 ├── [service]/         # Basic service scripts: s3, lambda, sqs, ecr, ecs
 └── [architecture]/    # Full-stack architecture scripts (see below)
 ```
@@ -167,11 +176,45 @@ Each architecture script provides `deploy`, `destroy`, and `status` commands plu
 - `eventbridge-lambda/` - Event-driven processing
 - `eventbridge-stepfunctions-lambda/` - Event-driven workflows
 
-**Streaming:**
+**Streaming & Data:**
 - `kinesis-lambda-s3/` - Real-time stream processing to S3
 - `msk-lambda-dynamodb/` - Kafka stream processing
+- `firehose-s3-athena/` - Firehose delivery to S3 with Athena
+- `kinesis-analytics-s3/` - Kinesis Data Analytics
+- `dynamodb-streams-firehose-s3/` - DynamoDB CDC to S3
 
+**Data Analytics & ETL:**
+- `s3-glue-athena/` - Data lake with Glue crawlers and Athena
+- `s3-glue-redshift/` - ETL pipeline to Redshift
+- `s3-glue-redshift-quicksight/` - Full BI pipeline
+- `glue-s3/` - Glue ETL jobs
+- `rds-dms-s3-glue-redshift/` - Database migration pipeline
+
+**ML/AI:**
+- `s3-sagemaker-s3/` - SageMaker training pipeline
+- `s3-sagemaker-lambda-apigw/` - ML inference API
+- `kinesis-sagemaker-dynamodb/` - Real-time ML inference
+- `s3-bedrock-lambda-apigw/` - Bedrock AI document processing
+
+**Media:**
+- `cloudfront-medialive-mediapackage-s3/` - Live streaming
+- `s3-mediaconvert-s3-cloudfront/` - Video transcoding
+- `kinesis-video-rekognition-sns/` - Video analytics
+
+**IoT & Transfer:**
+- `iot-kinesis-lambda/` - IoT data processing
+- `transfer-family-s3-lambda/` - SFTP file processing
+
+**Batch & Scheduling:**
+- `batch-s3/` - AWS Batch processing
+- `eventbridge-scheduler-lambda-s3/` - Scheduled Lambda execution
+- `eventbridge-stepfunctions-ecs/` - Event-driven ECS tasks
+- `s3-eventbridge-stepfunctions-lambda/` - S3 event workflows
+
+**Other:**
 - `amplify-hosting/` - Full-stack web app hosting
+- `apigw-websocket-lambda-dynamodb/` - WebSocket real-time apps
+- `s3-lambda-s3/` - S3 event-triggered file processing
 
 ### Script Features
 
