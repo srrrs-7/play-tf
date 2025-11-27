@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Count Up Demo</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+            line-height: 1.6;
+            color: #222;
+            background: #f7f7f9;
+        }
+
+        header {
+            background: #111827;
+            color: #fff;
+            padding: 24px 16px;
+            text-align: center;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .count {
+            font-size: 56px;
+            font-weight: 700;
+            margin: 8px 0 16px;
+            letter-spacing: 1px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            background: #2563eb;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 90px;
+        }
+
+        button.secondary {
+            background: #6b7280;
+        }
+
+        button.danger {
+            background: #ef4444;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        footer {
+            text-align: center;
+            color: #666;
+            padding: 16px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>カウントアップ</h1>
+        <p>Start を押すと数字が増えていきます。</p>
+    </header>
+
+    <main>
+        <section class="card">
+            <div id="count" class="count">0</div>
+
+            <div class="controls">
+                <button id="startBtn">Start</button>
+                <button id="stopBtn" class="secondary" disabled>Stop</button>
+                <button id="resetBtn" class="danger">Reset</button>
+            </div>
+
+            <p style="color:#666; margin-top:12px;">
+                1秒ごとに +1 する簡易カウントアップです。
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        © 2025 Count Up Demo
+    </footer>
+
+    <script>
+        let count = 0;
+        let timerId = null;
+
+        const countEl = document.getElementById("count");
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const resetBtn = document.getElementById("resetBtn");
+
+        function render() {
+            countEl.textContent = count;
+        }
+
+        function start() {
+            if (timerId !== null) return; // 二重起動防止
+            timerId = setInterval(() => {
+                count += 1;
+                render();
+            }, 1000);
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+        }
+
+        function stop() {
+            if (timerId === null) return;
+            clearInterval(timerId);
+            timerId = null;
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+
+        function reset() {
+            stop();
+            count = 0;
+            render();
+        }
+
+        startBtn.addEventListener("click", start);
+        stopBtn.addEventListener("click", stop);
+        resetBtn.addEventListener("click", reset);
+
+        render();
+    </script>
+</body>
+
+</html>
