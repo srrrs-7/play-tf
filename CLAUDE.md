@@ -60,18 +60,25 @@ When testing changes to a specific module or environment:
 
 ```
 iac/
-├── modules/           # Reusable Terraform modules
-│   ├── s3/
-│   ├── ec2/
-│   ├── rds/
-│   ├── vpc/
-│   ├── lambda/
-│   ├── ecr/
-│   ├── ecs/
-│   ├── dynamodb/
-│   ├── sqs/
-│   ├── eventbridge/
-│   ├── step_functions/
+├── modules/           # Reusable Terraform modules (18 modules)
+│   ├── alb/           # Application Load Balancer
+│   ├── apigateway/    # API Gateway REST API
+│   ├── apprunner/     # AWS App Runner
+│   ├── aurora/        # Aurora Serverless
+│   ├── cloudfront/    # CloudFront distribution
+│   ├── dynamodb/      # DynamoDB table
+│   ├── ec2/           # EC2 instances
+│   ├── ecr/           # Elastic Container Registry
+│   ├── ecs/           # ECS Fargate
+│   ├── eks/           # Elastic Kubernetes Service
+│   ├── elasticbeanstalk/  # Elastic Beanstalk
+│   ├── eventbridge/   # EventBridge rules
+│   ├── lambda/        # Lambda functions
+│   ├── rds/           # RDS instances
+│   ├── s3/            # S3 buckets
+│   ├── sqs/           # SQS queues
+│   ├── step_functions/ # Step Functions
+│   ├── vpc/           # VPC networking
 │   └── __template__/  # Template for creating new modules
 └── environments/      # Environment-specific configurations
     ├── dev/
@@ -82,12 +89,9 @@ iac/
     └── api/           # API Gateway + Lambda + DynamoDB
         └── api-handler/          # TypeScript Lambda for DynamoDB CRUD
 
-cli/                   # AWS CLI operation scripts
-├── s3/
-├── lambda/
-├── sqs/
-├── ecr/
-└── ecs/
+cli/                   # AWS CLI operation scripts (27 scripts)
+├── [service]/         # Basic service scripts: s3, lambda, sqs, ecr, ecs
+└── [architecture]/    # Full-stack architecture scripts (see below)
 ```
 
 ### Module Structure Pattern
@@ -121,10 +125,10 @@ Environments instantiate modules with environment-specific parameters. Resources
 The `cli/` directory contains bash scripts for common AWS operations. All scripts follow a consistent pattern:
 
 ```bash
-./cli/{service}/script.sh <command> [arguments]
+./cli/{name}/script.sh <command> [arguments]
 ```
 
-### Available CLI Scripts
+### Basic Service Scripts
 
 - **S3** (`cli/s3/script.sh`): Bucket and object operations (list, create, upload, download, sync, presigned URLs)
 - **ECR** (`cli/ecr/script.sh`): Container registry operations (repositories, images, docker login, scanning)
@@ -132,7 +136,45 @@ The `cli/` directory contains bash scripts for common AWS operations. All script
 - **Lambda** (`cli/lambda/script.sh`): Function operations
 - **SQS** (`cli/sqs/script.sh`): Queue operations
 
-Each script includes:
+### Architecture Scripts (Full-Stack Deployment)
+
+Each architecture script provides `deploy`, `destroy`, and `status` commands plus individual resource management.
+
+**CloudFront-based:**
+- `cloudfront-s3/` - Static website hosting
+- `cloudfront-s3-lambda-edge/` - Edge computing with Lambda@Edge
+- `cloudfront-alb-ec2-rds/` - Classic 3-tier architecture
+- `cloudfront-alb-ecs-aurora/` - Containerized with ECS Fargate
+- `cloudfront-alb-eks-aurora/` - Kubernetes with EKS
+- `cloudfront-apigw-lambda-dynamodb/` - Full serverless
+- `cloudfront-apprunner-rds/` - App Runner managed containers
+- `cloudfront-elasticbeanstalk-rds/` - Elastic Beanstalk PaaS
+
+**API Gateway-based:**
+- `apigw-lambda-dynamodb/` - Serverless REST API
+- `apigw-lambda-rdsproxy-rds/` - Serverless with RDS connection pooling
+- `apigw-vpclink-alb-ecs/` - Private API with ECS backend
+- `apigw-stepfunctions-lambda/` - Workflow orchestration
+
+**AppSync (GraphQL):**
+- `appsync-dynamodb/` - GraphQL with DynamoDB
+- `appsync-lambda-aurora/` - GraphQL with Lambda resolvers and Aurora
+
+**Event-Driven:**
+- `sqs-lambda-dynamodb/` - Message queue processing
+- `sns-sqs-lambda/` - Pub/sub with queue buffering
+- `sns-lambda-fanout/` - Fan-out pattern
+- `eventbridge-lambda/` - Event-driven processing
+- `eventbridge-stepfunctions-lambda/` - Event-driven workflows
+
+**Streaming:**
+- `kinesis-lambda-s3/` - Real-time stream processing to S3
+- `msk-lambda-dynamodb/` - Kafka stream processing
+
+- `amplify-hosting/` - Full-stack web app hosting
+
+### Script Features
+
 - Color-coded output (RED for errors, GREEN for success, YELLOW for warnings)
 - Interactive confirmations for destructive operations
 - Comprehensive help via `script.sh` (no arguments)
@@ -140,15 +182,21 @@ Each script includes:
 ### CLI Script Examples
 
 ```bash
-# S3 operations
+# Basic service operations
 ./cli/s3/script.sh list-buckets
-./cli/s3/script.sh upload myfile.txt my-bucket-name
 ./cli/s3/script.sh generate-presigned-url my-bucket key.txt 3600
-
-# ECR operations
-./cli/ecr/script.sh list-repositories
 ./cli/ecr/script.sh docker-login
-./cli/ecr/script.sh push-image my-repo my-local-image:latest v1.0
+
+# Architecture deployment (creates all required resources)
+./cli/apigw-lambda-dynamodb/script.sh deploy my-api
+./cli/cloudfront-s3/script.sh deploy my-website
+./cli/eventbridge-lambda/script.sh deploy my-events
+
+# Check deployed resources
+./cli/apigw-lambda-dynamodb/script.sh status
+
+# Cleanup
+./cli/apigw-lambda-dynamodb/script.sh destroy my-api
 ```
 
 ## Creating New Terraform Modules
