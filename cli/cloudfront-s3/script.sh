@@ -361,6 +361,11 @@ cf_create() {
                     "ErrorCachingMinTTL": 300
                 }]
             },
+            "ViewerCertificate": {
+                "CloudFrontDefaultCertificate": true,
+                "MinimumProtocolVersion": "TLSv1.2_2021",
+                "SSLSupportMethod": "sni-only"
+            },
             "Enabled": true,
             "PriceClass": "PriceClass_200"
         }')
@@ -434,6 +439,11 @@ cf_create_website() {
                         "OriginSslProtocols": {"Quantity": 1, "Items": ["TLSv1.2"]}
                     }
                 }]
+            },
+            "ViewerCertificate": {
+                "CloudFrontDefaultCertificate": true,
+                "MinimumProtocolVersion": "TLSv1.2_2021",
+                "SSLSupportMethod": "sni-only"
             },
             "Enabled": true,
             "PriceClass": "PriceClass_200"
@@ -565,15 +575,27 @@ deploy() {
     log_step "Step 2/2: Creating CloudFront distribution..."
     cf_create "$bucket_name" "$stack_name"
 
+    # Get the CloudFront domain for the created distribution
+    local dist_info
+    dist_info=$(aws cloudfront list-distributions \
+        --query "DistributionList.Items[?Comment=='CloudFront for S3 $stack_name'].{Id:Id,DomainName:DomainName}" \
+        --output json | jq -r '.[0]')
+    local dist_id=$(echo "$dist_info" | jq -r '.Id')
+    local domain_name=$(echo "$dist_info" | jq -r '.DomainName')
+
     echo ""
     echo -e "${GREEN}Deployment completed!${NC}"
+    echo ""
+    echo "CloudFront Domain: https://$domain_name"
+    echo "Distribution ID: $dist_id"
+    echo "S3 Bucket: $bucket_name"
     echo ""
     echo "Next steps:"
     echo "  1. Upload your static files:"
     echo "     ./script.sh s3-sync ./your-website-folder $bucket_name"
     echo ""
     echo "  2. Invalidate CloudFront cache after updates:"
-    echo "     ./script.sh cf-invalidate <distribution-id>"
+    echo "     ./script.sh cf-invalidate $dist_id"
 }
 
 destroy() {

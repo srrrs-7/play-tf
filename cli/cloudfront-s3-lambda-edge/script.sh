@@ -412,6 +412,11 @@ cf_create() {
                 }]
             },
             "DefaultRootObject": "index.html",
+            "ViewerCertificate": {
+                "CloudFrontDefaultCertificate": true,
+                "MinimumProtocolVersion": "TLSv1.2_2021",
+                "SSLSupportMethod": "sni-only"
+            },
             "Enabled": true,
             "PriceClass": "PriceClass_200"
         }')

@@ -372,32 +372,41 @@ distribution_create() {
         --query 'OriginAccessControl.Id' --output text 2>/dev/null || \
         aws cloudfront list-origin-access-controls --query "OriginAccessControlList.Items[?Name=='${name}-oac'].Id" --output text)
 
-    local config=$(cat << EOF
-{
-    "CallerReference": "$name-$(date +%s)",
-    "Comment": "Distribution for $bucket",
-    "DefaultCacheBehavior": {
-        "TargetOriginId": "S3-$bucket",
-        "ViewerProtocolPolicy": "redirect-to-https",
-        "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
-        "Compress": true,
-        "AllowedMethods": {"Quantity": 2, "Items": ["GET", "HEAD"]}
-    },
-    "Origins": {
-        "Quantity": 1,
-        "Items": [{
-            "Id": "S3-$bucket",
-            "DomainName": "$bucket.s3.$DEFAULT_REGION.amazonaws.com",
-            "OriginAccessControlId": "$oac_id",
-            "S3OriginConfig": {"OriginAccessIdentity": ""}
-        }]
-    },
-    "Enabled": true,
-    "PriceClass": "PriceClass_All",
-    "HttpVersion": "http2"
-}
-EOF
-)
+    local config
+    config=$(jq -n \
+        --arg caller_ref "$name-$(date +%s)" \
+        --arg comment "Distribution for $bucket" \
+        --arg bucket "$bucket" \
+        --arg region "$DEFAULT_REGION" \
+        --arg oac_id "$oac_id" \
+        '{
+            "CallerReference": $caller_ref,
+            "Comment": $comment,
+            "DefaultCacheBehavior": {
+                "TargetOriginId": ("S3-" + $bucket),
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                "Compress": true,
+                "AllowedMethods": {"Quantity": 2, "Items": ["GET", "HEAD"]}
+            },
+            "Origins": {
+                "Quantity": 1,
+                "Items": [{
+                    "Id": ("S3-" + $bucket),
+                    "DomainName": ($bucket + ".s3." + $region + ".amazonaws.com"),
+                    "OriginAccessControlId": $oac_id,
+                    "S3OriginConfig": {"OriginAccessIdentity": ""}
+                }]
+            },
+            "ViewerCertificate": {
+                "CloudFrontDefaultCertificate": true,
+                "MinimumProtocolVersion": "TLSv1.2_2021",
+                "SSLSupportMethod": "sni-only"
+            },
+            "Enabled": true,
+            "PriceClass": "PriceClass_All",
+            "HttpVersion": "http2"
+        }')
 
     local dist_id=$(aws cloudfront create-distribution --distribution-config "$config" --query 'Distribution.Id' --output text)
     local domain=$(aws cloudfront get-distribution --id "$dist_id" --query 'Distribution.DomainName' --output text)
@@ -519,32 +528,41 @@ EOF
         --query 'OriginAccessControl.Id' --output text 2>/dev/null || \
         aws cloudfront list-origin-access-controls --query "OriginAccessControlList.Items[?Name=='${name}-oac'].Id" --output text)
 
-    local cf_config=$(cat << EOF
-{
-    "CallerReference": "$name-$(date +%s)",
-    "Comment": "Video delivery for $name",
-    "DefaultCacheBehavior": {
-        "TargetOriginId": "S3-$output_bucket",
-        "ViewerProtocolPolicy": "redirect-to-https",
-        "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
-        "Compress": true,
-        "AllowedMethods": {"Quantity": 2, "Items": ["GET", "HEAD"]}
-    },
-    "Origins": {
-        "Quantity": 1,
-        "Items": [{
-            "Id": "S3-$output_bucket",
-            "DomainName": "$output_bucket.s3.$DEFAULT_REGION.amazonaws.com",
-            "OriginAccessControlId": "$oac_id",
-            "S3OriginConfig": {"OriginAccessIdentity": ""}
-        }]
-    },
-    "Enabled": true,
-    "PriceClass": "PriceClass_100",
-    "HttpVersion": "http2"
-}
-EOF
-)
+    local cf_config
+    cf_config=$(jq -n \
+        --arg caller_ref "$name-$(date +%s)" \
+        --arg comment "Video delivery for $name" \
+        --arg output_bucket "$output_bucket" \
+        --arg region "$DEFAULT_REGION" \
+        --arg oac_id "$oac_id" \
+        '{
+            "CallerReference": $caller_ref,
+            "Comment": $comment,
+            "DefaultCacheBehavior": {
+                "TargetOriginId": ("S3-" + $output_bucket),
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                "Compress": true,
+                "AllowedMethods": {"Quantity": 2, "Items": ["GET", "HEAD"]}
+            },
+            "Origins": {
+                "Quantity": 1,
+                "Items": [{
+                    "Id": ("S3-" + $output_bucket),
+                    "DomainName": ($output_bucket + ".s3." + $region + ".amazonaws.com"),
+                    "OriginAccessControlId": $oac_id,
+                    "S3OriginConfig": {"OriginAccessIdentity": ""}
+                }]
+            },
+            "ViewerCertificate": {
+                "CloudFrontDefaultCertificate": true,
+                "MinimumProtocolVersion": "TLSv1.2_2021",
+                "SSLSupportMethod": "sni-only"
+            },
+            "Enabled": true,
+            "PriceClass": "PriceClass_100",
+            "HttpVersion": "http2"
+        }')
 
     local dist_id=$(aws cloudfront create-distribution --distribution-config "$cf_config" --query 'Distribution.Id' --output text 2>/dev/null || echo "")
     local cf_domain=""
