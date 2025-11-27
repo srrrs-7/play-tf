@@ -60,7 +60,7 @@ When testing changes to a specific module or environment:
 
 ```
 iac/
-├── modules/           # Reusable Terraform modules (27 modules)
+├── modules/           # Reusable Terraform modules (28 modules including template)
 │   ├── alb/           # Application Load Balancer
 │   ├── amplify/       # AWS Amplify
 │   ├── apigateway/    # API Gateway REST API
