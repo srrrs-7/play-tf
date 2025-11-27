@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Load common functions
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
+
 # =============================================================================
 # CloudFront → MediaLive → MediaPackage → S3 Live Streaming Pipeline
 # =============================================================================
@@ -10,13 +14,6 @@ set -e
 # - CloudFront: CDN for low-latency delivery
 # - S3: Archive storage for recordings
 # =============================================================================
-
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
 
 # Default region
 DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-northeast-1}
@@ -78,35 +75,10 @@ EOF
 # =============================================================================
 # Logging Functions
 # =============================================================================
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-log_step() {
-    echo -e "${BLUE}[STEP]${NC} $1"
-}
 
 # =============================================================================
 # Helper Functions
 # =============================================================================
-check_aws_cli() {
-    if ! command -v aws &> /dev/null; then
-        log_error "AWS CLI is not installed. Please install it first."
-        exit 1
-    fi
-}
-
-get_account_id() {
-    aws sts get-caller-identity --query Account --output text
-}
 
 wait_for_medialive_channel() {
     local channel_id=$1

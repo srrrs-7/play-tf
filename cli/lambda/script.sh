@@ -2,14 +2,12 @@
 
 set -e
 
+# Load common functions
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
+
 # Lambda Operations Script
 # Provides common Lambda operations using AWS CLI
-
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
 
 # Function to display usage
 usage() {
