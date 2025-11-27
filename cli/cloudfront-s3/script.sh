@@ -192,19 +192,19 @@ s3_policy_public() {
             "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
 
     # Set bucket policy
-    local policy=$(cat << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [{
-        "Sid": "PublicReadGetObject",
-        "Effect": "Allow",
-        "Principal": "*",
-        "Action": "s3:GetObject",
-        "Resource": "arn:aws:s3:::$bucket/*"
-    }]
-}
-EOF
-)
+    local policy
+    policy=$(jq -n \
+        --arg bucket "$bucket" \
+        '{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Sid": "PublicReadGetObject",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": ("arn:aws:s3:::" + $bucket + "/*")
+            }]
+        }')
 
     aws s3api put-bucket-policy --bucket "$bucket" --policy "$policy"
     log_info "Public read policy set"
@@ -221,21 +221,28 @@ s3_policy_cloudfront() {
 
     log_step "Setting CloudFront OAI policy"
 
-    local policy=$(cat << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [{
-        "Sid": "AllowCloudFrontOAI",
-        "Effect": "Allow",
-        "Principal": {
-            "AWS": "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity $oai_id"
-        },
-        "Action": "s3:GetObject",
-        "Resource": "arn:aws:s3:::$bucket/*"
-    }]
-}
-EOF
-)
+    # Get the OAI's S3 Canonical User ID for the policy
+    local oai_canonical
+    oai_canonical=$(aws cloudfront get-cloud-front-origin-access-identity \
+        --id "$oai_id" \
+        --query 'CloudFrontOriginAccessIdentity.S3CanonicalUserId' --output text)
+
+    local policy
+    policy=$(jq -n \
+        --arg bucket "$bucket" \
+        --arg oai_canonical "$oai_canonical" \
+        '{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Sid": "AllowCloudFrontOAI",
+                "Effect": "Allow",
+                "Principal": {
+                    "CanonicalUser": $oai_canonical
+                },
+                "Action": "s3:GetObject",
+                "Resource": ("arn:aws:s3:::" + $bucket + "/*")
+            }]
+        }')
 
     aws s3api put-bucket-policy --bucket "$bucket" --policy "$policy"
     log_info "CloudFront OAI policy set"
@@ -308,55 +315,55 @@ cf_create() {
     # Set bucket policy for OAI
     s3_policy_cloudfront "$bucket" "$oai_id"
 
-    # Get OAI canonical user ID
-    local oai_canonical
-    oai_canonical=$(aws cloudfront get-cloud-front-origin-access-identity \
-        --id "$oai_id" \
-        --query 'CloudFrontOriginAccessIdentity.S3CanonicalUserId' --output text)
-
-    local dist_config=$(cat << EOF
-{
-    "CallerReference": "$stack_name-$(date +%s)",
-    "Comment": "CloudFront for S3 $stack_name",
-    "DefaultCacheBehavior": {
-        "TargetOriginId": "S3-$bucket",
-        "ViewerProtocolPolicy": "redirect-to-https",
-        "AllowedMethods": ["GET", "HEAD"],
-        "CachedMethods": ["GET", "HEAD"],
-        "ForwardedValues": {
-            "QueryString": false,
-            "Cookies": {"Forward": "none"}
-        },
-        "MinTTL": 0,
-        "DefaultTTL": 86400,
-        "MaxTTL": 31536000,
-        "Compress": true
-    },
-    "Origins": {
-        "Quantity": 1,
-        "Items": [{
-            "Id": "S3-$bucket",
-            "DomainName": "$bucket.s3.$DEFAULT_REGION.amazonaws.com",
-            "S3OriginConfig": {
-                "OriginAccessIdentity": "origin-access-identity/cloudfront/$oai_id"
-            }
-        }]
-    },
-    "DefaultRootObject": "index.html",
-    "CustomErrorResponses": {
-        "Quantity": 1,
-        "Items": [{
-            "ErrorCode": 404,
-            "ResponsePagePath": "/index.html",
-            "ResponseCode": "200",
-            "ErrorCachingMinTTL": 300
-        }]
-    },
-    "Enabled": true,
-    "PriceClass": "PriceClass_200"
-}
-EOF
-)
+    local dist_config
+    dist_config=$(jq -n \
+        --arg caller_ref "$stack_name-$(date +%s)" \
+        --arg comment "CloudFront for S3 $stack_name" \
+        --arg bucket "$bucket" \
+        --arg region "$DEFAULT_REGION" \
+        --arg oai_id "$oai_id" \
+        '{
+            "CallerReference": $caller_ref,
+            "Comment": $comment,
+            "DefaultCacheBehavior": {
+                "TargetOriginId": ("S3-" + $bucket),
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                    "Quantity": 2,
+                    "Items": ["GET", "HEAD"]
+                },
+                "ForwardedValues": {
+                    "QueryString": false,
+                    "Cookies": {"Forward": "none"}
+                },
+                "MinTTL": 0,
+                "DefaultTTL": 86400,
+                "MaxTTL": 31536000,
+                "Compress": true
+            },
+            "Origins": {
+                "Quantity": 1,
+                "Items": [{
+                    "Id": ("S3-" + $bucket),
+                    "DomainName": ($bucket + ".s3." + $region + ".amazonaws.com"),
+                    "S3OriginConfig": {
+                        "OriginAccessIdentity": ("origin-access-identity/cloudfront/" + $oai_id)
+                    }
+                }]
+            },
+            "DefaultRootObject": "index.html",
+            "CustomErrorResponses": {
+                "Quantity": 1,
+                "Items": [{
+                    "ErrorCode": 404,
+                    "ResponsePagePath": "/index.html",
+                    "ResponseCode": "200",
+                    "ErrorCachingMinTTL": 300
+                }]
+            },
+            "Enabled": true,
+            "PriceClass": "PriceClass_200"
+        }')
 
     local dist_id
     dist_id=$(aws cloudfront create-distribution \
@@ -390,42 +397,47 @@ cf_create_website() {
     local origin_domain
     origin_domain=$(echo "$bucket_website_url" | sed 's|http://||' | sed 's|/.*||')
 
-    local dist_config=$(cat << EOF
-{
-    "CallerReference": "$stack_name-$(date +%s)",
-    "Comment": "CloudFront for S3 Website $stack_name",
-    "DefaultCacheBehavior": {
-        "TargetOriginId": "S3Website-$stack_name",
-        "ViewerProtocolPolicy": "redirect-to-https",
-        "AllowedMethods": ["GET", "HEAD"],
-        "CachedMethods": ["GET", "HEAD"],
-        "ForwardedValues": {
-            "QueryString": false,
-            "Cookies": {"Forward": "none"}
-        },
-        "MinTTL": 0,
-        "DefaultTTL": 86400,
-        "MaxTTL": 31536000,
-        "Compress": true
-    },
-    "Origins": {
-        "Quantity": 1,
-        "Items": [{
-            "Id": "S3Website-$stack_name",
-            "DomainName": "$origin_domain",
-            "CustomOriginConfig": {
-                "HTTPPort": 80,
-                "HTTPSPort": 443,
-                "OriginProtocolPolicy": "http-only",
-                "OriginSslProtocols": {"Quantity": 1, "Items": ["TLSv1.2"]}
-            }
-        }]
-    },
-    "Enabled": true,
-    "PriceClass": "PriceClass_200"
-}
-EOF
-)
+    local dist_config
+    dist_config=$(jq -n \
+        --arg caller_ref "$stack_name-$(date +%s)" \
+        --arg comment "CloudFront for S3 Website $stack_name" \
+        --arg stack_name "$stack_name" \
+        --arg origin_domain "$origin_domain" \
+        '{
+            "CallerReference": $caller_ref,
+            "Comment": $comment,
+            "DefaultCacheBehavior": {
+                "TargetOriginId": ("S3Website-" + $stack_name),
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                    "Quantity": 2,
+                    "Items": ["GET", "HEAD"]
+                },
+                "ForwardedValues": {
+                    "QueryString": false,
+                    "Cookies": {"Forward": "none"}
+                },
+                "MinTTL": 0,
+                "DefaultTTL": 86400,
+                "MaxTTL": 31536000,
+                "Compress": true
+            },
+            "Origins": {
+                "Quantity": 1,
+                "Items": [{
+                    "Id": ("S3Website-" + $stack_name),
+                    "DomainName": $origin_domain,
+                    "CustomOriginConfig": {
+                        "HTTPPort": 80,
+                        "HTTPSPort": 443,
+                        "OriginProtocolPolicy": "http-only",
+                        "OriginSslProtocols": {"Quantity": 1, "Items": ["TLSv1.2"]}
+                    }
+                }]
+            },
+            "Enabled": true,
+            "PriceClass": "PriceClass_200"
+        }')
 
     local dist_id
     dist_id=$(aws cloudfront create-distribution \
@@ -542,8 +554,13 @@ deploy() {
 
     local bucket_name="${stack_name}-static-$(date +%Y%m%d)"
 
-    log_step "Step 1/2: Creating S3 bucket..."
-    s3_create "$bucket_name"
+    existing_bucket=$(aws s3api list-buckets --query "Buckets[?Name=='$bucket_name'].Name" --output text)
+    if [ -n "$existing_bucket" ]; then
+        log_info "S3 bucket already exists: $bucket_name"
+    else
+        log_step "Step 1/2: Creating S3 bucket..."
+        s3_create "$bucket_name"
+    fi
 
     log_step "Step 2/2: Creating CloudFront distribution..."
     cf_create "$bucket_name" "$stack_name"

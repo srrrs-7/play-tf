@@ -403,21 +403,23 @@ EOF
     local domain=$(aws cloudfront get-distribution --id "$dist_id" --query 'Distribution.DomainName' --output text)
 
     # Update S3 bucket policy for CloudFront
-    local bucket_policy=$(cat << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"Service": "cloudfront.amazonaws.com"},
-        "Action": "s3:GetObject",
-        "Resource": "arn:aws:s3:::$bucket/*",
-        "Condition": {
-            "StringEquals": {"AWS:SourceArn": "arn:aws:cloudfront::$account_id:distribution/$dist_id"}
-        }
-    }]
-}
-EOF
-)
+    local bucket_policy
+    bucket_policy=$(jq -n \
+        --arg bucket "$bucket" \
+        --arg account_id "$account_id" \
+        --arg dist_id "$dist_id" \
+        '{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "cloudfront.amazonaws.com"},
+                "Action": "s3:GetObject",
+                "Resource": ("arn:aws:s3:::" + $bucket + "/*"),
+                "Condition": {
+                    "StringEquals": {"AWS:SourceArn": ("arn:aws:cloudfront::" + $account_id + ":distribution/" + $dist_id)}
+                }
+            }]
+        }')
     aws s3api put-bucket-policy --bucket "$bucket" --policy "$bucket_policy"
 
     log_info "Distribution created: $dist_id"
@@ -550,19 +552,21 @@ EOF
         cf_domain=$(aws cloudfront get-distribution --id "$dist_id" --query 'Distribution.DomainName' --output text)
 
         # Update S3 bucket policy
-        local bucket_policy=$(cat << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"Service": "cloudfront.amazonaws.com"},
-        "Action": "s3:GetObject",
-        "Resource": "arn:aws:s3:::$output_bucket/*",
-        "Condition": {"StringEquals": {"AWS:SourceArn": "arn:aws:cloudfront::$account_id:distribution/$dist_id"}}
-    }]
-}
-EOF
-)
+        local bucket_policy
+        bucket_policy=$(jq -n \
+            --arg output_bucket "$output_bucket" \
+            --arg account_id "$account_id" \
+            --arg dist_id "$dist_id" \
+            '{
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"Service": "cloudfront.amazonaws.com"},
+                    "Action": "s3:GetObject",
+                    "Resource": ("arn:aws:s3:::" + $output_bucket + "/*"),
+                    "Condition": {"StringEquals": {"AWS:SourceArn": ("arn:aws:cloudfront::" + $account_id + ":distribution/" + $dist_id)}}
+                }]
+            }')
         aws s3api put-bucket-policy --bucket "$output_bucket" --policy "$bucket_policy"
     fi
 

@@ -357,51 +357,64 @@ cf_create() {
         --cloud-front-origin-access-identity-config "CallerReference=$(date +%s),Comment=OAI for $stack_name" \
         --query 'CloudFrontOriginAccessIdentity.Id' --output text)
 
+    # Get the OAI's S3 Canonical User ID for the policy
+    local oai_canonical
+    oai_canonical=$(aws cloudfront get-cloud-front-origin-access-identity \
+        --id "$oai_id" \
+        --query 'CloudFrontOriginAccessIdentity.S3CanonicalUserId' --output text)
+
     # Set bucket policy
-    local policy=$(cat << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity $oai_id"},
-        "Action": "s3:GetObject",
-        "Resource": "arn:aws:s3:::$bucket/*"
-    }]
-}
-EOF
-)
+    local policy
+    policy=$(jq -n \
+        --arg bucket "$bucket" \
+        --arg oai_canonical "$oai_canonical" \
+        '{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"CanonicalUser": $oai_canonical},
+                "Action": "s3:GetObject",
+                "Resource": ("arn:aws:s3:::" + $bucket + "/*")
+            }]
+        }')
     aws s3api put-bucket-policy --bucket "$bucket" --policy "$policy"
 
-    local dist_config=$(cat << EOF
-{
-    "CallerReference": "$stack_name-$(date +%s)",
-    "Comment": "CloudFront with Lambda@Edge for $stack_name",
-    "DefaultCacheBehavior": {
-        "TargetOriginId": "S3-$bucket",
-        "ViewerProtocolPolicy": "redirect-to-https",
-        "AllowedMethods": ["GET", "HEAD"],
-        "CachedMethods": ["GET", "HEAD"],
-        "ForwardedValues": {"QueryString": false, "Cookies": {"Forward": "none"}},
-        "MinTTL": 0,
-        "DefaultTTL": 86400,
-        "MaxTTL": 31536000,
-        "Compress": true,
-        "LambdaFunctionAssociations": {"Quantity": 0, "Items": []}
-    },
-    "Origins": {
-        "Quantity": 1,
-        "Items": [{
-            "Id": "S3-$bucket",
-            "DomainName": "$bucket.s3.$DEFAULT_REGION.amazonaws.com",
-            "S3OriginConfig": {"OriginAccessIdentity": "origin-access-identity/cloudfront/$oai_id"}
-        }]
-    },
-    "DefaultRootObject": "index.html",
-    "Enabled": true,
-    "PriceClass": "PriceClass_200"
-}
-EOF
-)
+    local dist_config
+    dist_config=$(jq -n \
+        --arg caller_ref "$stack_name-$(date +%s)" \
+        --arg comment "CloudFront with Lambda@Edge for $stack_name" \
+        --arg bucket "$bucket" \
+        --arg region "$DEFAULT_REGION" \
+        --arg oai_id "$oai_id" \
+        '{
+            "CallerReference": $caller_ref,
+            "Comment": $comment,
+            "DefaultCacheBehavior": {
+                "TargetOriginId": ("S3-" + $bucket),
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                    "Quantity": 2,
+                    "Items": ["GET", "HEAD"]
+                },
+                "ForwardedValues": {"QueryString": false, "Cookies": {"Forward": "none"}},
+                "MinTTL": 0,
+                "DefaultTTL": 86400,
+                "MaxTTL": 31536000,
+                "Compress": true,
+                "LambdaFunctionAssociations": {"Quantity": 0, "Items": []}
+            },
+            "Origins": {
+                "Quantity": 1,
+                "Items": [{
+                    "Id": ("S3-" + $bucket),
+                    "DomainName": ($bucket + ".s3." + $region + ".amazonaws.com"),
+                    "S3OriginConfig": {"OriginAccessIdentity": ("origin-access-identity/cloudfront/" + $oai_id)}
+                }]
+            },
+            "DefaultRootObject": "index.html",
+            "Enabled": true,
+            "PriceClass": "PriceClass_200"
+        }')
 
     local dist_id
     dist_id=$(aws cloudfront create-distribution \
