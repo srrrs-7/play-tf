@@ -362,7 +362,7 @@ cf_create() {
                 }]
             },
             "ViewerCertificate": {
-                "CloudFrontDefaultCertificate": true,
+                "CloudFrontDefaultCertificate": true,   # 推奨されないため、ACM証明書を使用することを検討
                 "MinimumProtocolVersion": "TLSv1.2_2021",
                 "SSLSupportMethod": "sni-only"
             },
@@ -441,7 +441,7 @@ cf_create_website() {
                 }]
             },
             "ViewerCertificate": {
-                "CloudFrontDefaultCertificate": true,
+                "CloudFrontDefaultCertificate": true,   # 推奨されないため、ACM証明書を使用することを検討
                 "MinimumProtocolVersion": "TLSv1.2_2021",
                 "SSLSupportMethod": "sni-only"
             },
