@@ -54,16 +54,16 @@ resource "aws_scheduler_schedule" "this" {
     dynamic "ecs_parameters" {
       for_each = lookup(each.value.target, "ecs_parameters", null) != null ? [each.value.target.ecs_parameters] : []
       content {
-        task_definition_arn         = ecs_parameters.value.task_definition_arn
-        task_count                  = lookup(ecs_parameters.value, "task_count", 1)
-        launch_type                 = lookup(ecs_parameters.value, "launch_type", null)
-        platform_version            = lookup(ecs_parameters.value, "platform_version", null)
-        group                       = lookup(ecs_parameters.value, "group", null)
-        enable_ecs_managed_tags     = lookup(ecs_parameters.value, "enable_ecs_managed_tags", null)
-        enable_execute_command      = lookup(ecs_parameters.value, "enable_execute_command", null)
-        propagate_tags              = lookup(ecs_parameters.value, "propagate_tags", null)
-        reference_id                = lookup(ecs_parameters.value, "reference_id", null)
-        tags                        = lookup(ecs_parameters.value, "tags", null)
+        task_definition_arn     = ecs_parameters.value.task_definition_arn
+        task_count              = lookup(ecs_parameters.value, "task_count", 1)
+        launch_type             = lookup(ecs_parameters.value, "launch_type", null)
+        platform_version        = lookup(ecs_parameters.value, "platform_version", null)
+        group                   = lookup(ecs_parameters.value, "group", null)
+        enable_ecs_managed_tags = lookup(ecs_parameters.value, "enable_ecs_managed_tags", null)
+        enable_execute_command  = lookup(ecs_parameters.value, "enable_execute_command", null)
+        propagate_tags          = lookup(ecs_parameters.value, "propagate_tags", null)
+        reference_id            = lookup(ecs_parameters.value, "reference_id", null)
+        tags                    = lookup(ecs_parameters.value, "tags", null)
 
         dynamic "capacity_provider_strategy" {
           for_each = lookup(ecs_parameters.value, "capacity_provider_strategy", [])

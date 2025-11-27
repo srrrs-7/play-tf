@@ -67,19 +67,19 @@ resource "aws_amplify_branch" "this" {
   branch_name = each.value.branch_name
 
   # ブランチ設定
-  description               = lookup(each.value, "description", null)
-  display_name              = lookup(each.value, "display_name", null)
-  enable_auto_build         = lookup(each.value, "enable_auto_build", true)
-  enable_basic_auth         = lookup(each.value, "enable_basic_auth", false)
-  basic_auth_credentials    = lookup(each.value, "basic_auth_credentials", null)
-  enable_notification       = lookup(each.value, "enable_notification", false)
-  enable_performance_mode   = lookup(each.value, "enable_performance_mode", false)
-  enable_pull_request_preview = lookup(each.value, "enable_pull_request_preview", false)
-  environment_variables     = lookup(each.value, "environment_variables", {})
-  framework                 = lookup(each.value, "framework", null)
+  description                   = lookup(each.value, "description", null)
+  display_name                  = lookup(each.value, "display_name", null)
+  enable_auto_build             = lookup(each.value, "enable_auto_build", true)
+  enable_basic_auth             = lookup(each.value, "enable_basic_auth", false)
+  basic_auth_credentials        = lookup(each.value, "basic_auth_credentials", null)
+  enable_notification           = lookup(each.value, "enable_notification", false)
+  enable_performance_mode       = lookup(each.value, "enable_performance_mode", false)
+  enable_pull_request_preview   = lookup(each.value, "enable_pull_request_preview", false)
+  environment_variables         = lookup(each.value, "environment_variables", {})
+  framework                     = lookup(each.value, "framework", null)
   pull_request_environment_name = lookup(each.value, "pull_request_environment_name", null)
-  stage                     = lookup(each.value, "stage", null)
-  ttl                       = lookup(each.value, "ttl", null)
+  stage                         = lookup(each.value, "stage", null)
+  ttl                           = lookup(each.value, "ttl", null)
 
   # バックエンド環境ARN（Amplify Studio用）
   backend_environment_arn = lookup(each.value, "backend_environment_arn", null)
@@ -91,10 +91,10 @@ resource "aws_amplify_branch" "this" {
 resource "aws_amplify_domain_association" "this" {
   for_each = { for domain in var.domain_associations : domain.domain_name => domain }
 
-  app_id                = aws_amplify_app.this.id
-  domain_name           = each.value.domain_name
+  app_id                 = aws_amplify_app.this.id
+  domain_name            = each.value.domain_name
   enable_auto_sub_domain = lookup(each.value, "enable_auto_sub_domain", false)
-  wait_for_verification = lookup(each.value, "wait_for_verification", false)
+  wait_for_verification  = lookup(each.value, "wait_for_verification", false)
 
   dynamic "sub_domain" {
     for_each = each.value.sub_domains

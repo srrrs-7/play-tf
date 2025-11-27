@@ -215,16 +215,16 @@ variable "visibility" {
 variable "dynamodb_datasources" {
   description = "List of DynamoDB data sources"
   type = list(object({
-    name                    = string
-    table_name              = string
-    service_role_arn        = string
-    region                  = optional(string)
-    use_caller_credentials  = optional(bool)
-    versioned               = optional(bool)
-    delta_sync_enabled      = optional(bool)
-    base_table_ttl          = optional(number)
-    delta_sync_table_ttl    = optional(number)
-    delta_sync_table_name   = optional(string)
+    name                   = string
+    table_name             = string
+    service_role_arn       = string
+    region                 = optional(string)
+    use_caller_credentials = optional(bool)
+    versioned              = optional(bool)
+    delta_sync_enabled     = optional(bool)
+    base_table_ttl         = optional(number)
+    delta_sync_table_ttl   = optional(number)
+    delta_sync_table_name  = optional(string)
   }))
   default = []
 }
@@ -273,12 +273,12 @@ variable "resolvers" {
     runtime_name      = optional(string)
     runtime_version   = optional(string)
     code              = optional(string)
-    pipeline_config   = optional(object({
+    pipeline_config = optional(object({
       functions = list(string)
     }))
-    caching_keys      = optional(list(string))
-    caching_ttl       = optional(number)
-    max_batch_size    = optional(number)
+    caching_keys   = optional(list(string))
+    caching_ttl    = optional(number)
+    max_batch_size = optional(number)
   }))
   default = []
 }

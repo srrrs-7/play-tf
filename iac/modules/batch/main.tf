@@ -18,16 +18,16 @@ resource "aws_batch_compute_environment" "this" {
       desired_vcpus       = lookup(compute_resources.value, "desired_vcpus", null)
 
       # EC2/SPOT設定
-      instance_type         = lookup(compute_resources.value, "instance_type", null)
-      instance_role         = lookup(compute_resources.value, "instance_role", null)
-      image_id              = lookup(compute_resources.value, "image_id", null)
-      ec2_key_pair          = lookup(compute_resources.value, "ec2_key_pair", null)
-      bid_percentage        = lookup(compute_resources.value, "bid_percentage", null)
-      spot_iam_fleet_role   = lookup(compute_resources.value, "spot_iam_fleet_role", null)
-      placement_group       = lookup(compute_resources.value, "placement_group", null)
+      instance_type       = lookup(compute_resources.value, "instance_type", null)
+      instance_role       = lookup(compute_resources.value, "instance_role", null)
+      image_id            = lookup(compute_resources.value, "image_id", null)
+      ec2_key_pair        = lookup(compute_resources.value, "ec2_key_pair", null)
+      bid_percentage      = lookup(compute_resources.value, "bid_percentage", null)
+      spot_iam_fleet_role = lookup(compute_resources.value, "spot_iam_fleet_role", null)
+      placement_group     = lookup(compute_resources.value, "placement_group", null)
 
       # ネットワーク設定
-      subnets         = compute_resources.value.subnets
+      subnets            = compute_resources.value.subnets
       security_group_ids = compute_resources.value.security_group_ids
 
       # EC2設定
@@ -57,7 +57,7 @@ resource "aws_batch_compute_environment" "this" {
   dynamic "eks_configuration" {
     for_each = lookup(each.value, "eks_configuration", null) != null ? [each.value.eks_configuration] : []
     content {
-      eks_cluster_arn    = eks_configuration.value.eks_cluster_arn
+      eks_cluster_arn      = eks_configuration.value.eks_cluster_arn
       kubernetes_namespace = eks_configuration.value.kubernetes_namespace
     }
   }

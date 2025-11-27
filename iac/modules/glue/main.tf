@@ -121,9 +121,9 @@ resource "aws_glue_crawler" "this" {
   dynamic "delta_target" {
     for_each = lookup(each.value, "delta_targets", [])
     content {
-      delta_tables          = delta_target.value.delta_tables
-      connection_name       = lookup(delta_target.value, "connection_name", null)
-      write_manifest        = lookup(delta_target.value, "write_manifest", false)
+      delta_tables              = delta_target.value.delta_tables
+      connection_name           = lookup(delta_target.value, "connection_name", null)
+      write_manifest            = lookup(delta_target.value, "write_manifest", false)
       create_native_delta_table = lookup(delta_target.value, "create_native_delta_table", false)
     }
   }
@@ -229,12 +229,12 @@ resource "aws_glue_job" "this" {
 resource "aws_glue_trigger" "this" {
   for_each = { for trigger in var.triggers : trigger.name => trigger }
 
-  name        = each.value.name
-  type        = each.value.type
-  description = lookup(each.value, "description", null)
-  enabled     = lookup(each.value, "enabled", true)
-  schedule    = lookup(each.value, "schedule", null)
-  workflow_name = lookup(each.value, "workflow_name", null)
+  name              = each.value.name
+  type              = each.value.type
+  description       = lookup(each.value, "description", null)
+  enabled           = lookup(each.value, "enabled", true)
+  schedule          = lookup(each.value, "schedule", null)
+  workflow_name     = lookup(each.value, "workflow_name", null)
   start_on_creation = lookup(each.value, "start_on_creation", false)
 
   # アクション
@@ -293,10 +293,10 @@ resource "aws_glue_trigger" "this" {
 resource "aws_glue_workflow" "this" {
   for_each = { for workflow in var.workflows : workflow.name => workflow }
 
-  name                = each.value.name
-  description         = lookup(each.value, "description", null)
+  name                   = each.value.name
+  description            = lookup(each.value, "description", null)
   default_run_properties = lookup(each.value, "default_run_properties", null)
-  max_concurrent_runs = lookup(each.value, "max_concurrent_runs", null)
+  max_concurrent_runs    = lookup(each.value, "max_concurrent_runs", null)
 
   tags = var.tags
 }

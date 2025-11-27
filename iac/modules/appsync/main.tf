@@ -127,8 +127,8 @@ resource "aws_appsync_datasource" "dynamodb" {
     dynamic "delta_sync_config" {
       for_each = lookup(each.value, "delta_sync_enabled", false) ? [1] : []
       content {
-        base_table_ttl       = each.value.base_table_ttl
-        delta_sync_table_ttl = each.value.delta_sync_table_ttl
+        base_table_ttl        = each.value.base_table_ttl
+        delta_sync_table_ttl  = each.value.delta_sync_table_ttl
         delta_sync_table_name = each.value.delta_sync_table_name
       }
     }
@@ -257,7 +257,7 @@ resource "aws_appsync_function" "this" {
 
   code = lookup(each.value, "code", null)
 
-  description                  = lookup(each.value, "description", null)
-  function_version             = lookup(each.value, "function_version", "2018-05-29")
-  max_batch_size               = lookup(each.value, "max_batch_size", null)
+  description      = lookup(each.value, "description", null)
+  function_version = lookup(each.value, "function_version", "2018-05-29")
+  max_batch_size   = lookup(each.value, "max_batch_size", null)
 }

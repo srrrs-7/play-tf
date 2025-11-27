@@ -24,8 +24,8 @@ variable "schedules" {
     kms_key_arn                  = optional(string)
 
     # フレキシブルタイムウィンドウ
-    flexible_time_window_mode    = optional(string)
-    maximum_window_in_minutes    = optional(number)
+    flexible_time_window_mode = optional(string)
+    maximum_window_in_minutes = optional(number)
 
     # ターゲット設定
     target = object({

@@ -145,14 +145,14 @@ variable "crawlers" {
 variable "jobs" {
   description = "List of Glue jobs"
   type = list(object({
-    name        = string
-    role_arn    = string
-    description = optional(string)
-    glue_version = optional(string)
-    max_capacity = optional(number)
-    max_retries  = optional(number)
-    timeout      = optional(number)
-    worker_type  = optional(string)
+    name              = string
+    role_arn          = string
+    description       = optional(string)
+    glue_version      = optional(string)
+    max_capacity      = optional(number)
+    max_retries       = optional(number)
+    timeout           = optional(number)
+    worker_type       = optional(string)
     number_of_workers = optional(number)
 
     command = object({
