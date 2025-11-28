@@ -13,11 +13,6 @@ output "function_name" {
   value       = aws_lambda_function.main.function_name
 }
 
-output "function_arn" {
-  description = "The ARN of the Lambda function (deprecated, use 'arn' instead)"
-  value       = aws_lambda_function.main.arn
-}
-
 output "invoke_arn" {
   description = "API GatewayなどからのInvoke ARN"
   value       = aws_lambda_function.main.invoke_arn

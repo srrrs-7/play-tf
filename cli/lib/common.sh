@@ -1,6 +1,16 @@
 #!/bin/bash
 # Common functions for AWS CLI scripts
 # Source this file: source "$(dirname "$0")/../lib/common.sh"
+#
+# Additional helper libraries available:
+#   - dynamodb-helpers.sh: DynamoDB table and item operations
+#   - lambda-helpers.sh: Lambda function operations with IAM
+#   - apigw-helpers.sh: API Gateway REST API operations
+#   - cloudfront-helpers.sh: CloudFront distribution operations
+#
+# Example:
+#   source "$SCRIPT_DIR/../lib/common.sh"
+#   source "$SCRIPT_DIR/../lib/dynamodb-helpers.sh"
 
 # =============================================================================
 # Color Codes

@@ -18,16 +18,6 @@ output "repository_url" {
   value       = aws_ecr_repository.this.repository_url
 }
 
-output "repository_arn" {
-  description = "The ARN of the ECR repository (deprecated, use 'arn' instead)"
-  value       = aws_ecr_repository.this.arn
-}
-
-output "repository_name" {
-  description = "The name of the ECR repository (deprecated, use 'name' instead)"
-  value       = aws_ecr_repository.this.name
-}
-
 output "registry_id" {
   description = "Registry ID"
   value       = aws_ecr_repository.this.registry_id
