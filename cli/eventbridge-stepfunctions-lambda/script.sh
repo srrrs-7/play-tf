@@ -188,93 +188,14 @@ deploy() {
     # Create Lambda functions
     log_step "Creating Lambda functions..."
     local lambda_dir="/tmp/${name}-lambdas"
+    local lambda_src_dir="$SCRIPT_DIR/lambda"
     mkdir -p "$lambda_dir"
 
-    # Validate order Lambda
-    cat << 'EOF' > "$lambda_dir/validate.js"
-exports.handler = async (event) => {
-    console.log('Validating order:', JSON.stringify(event));
-    const { orderId, items, customerId } = event.detail || event;
-
-    if (!orderId || !items || items.length === 0) {
-        throw new Error('Invalid order: missing required fields');
-    }
-
-    const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    return {
-        ...event,
-        validated: true,
-        totalAmount,
-        validatedAt: new Date().toISOString()
-    };
-};
-EOF
-
-    # Process payment Lambda
-    cat << 'EOF' > "$lambda_dir/payment.js"
-exports.handler = async (event) => {
-    console.log('Processing payment:', JSON.stringify(event));
-    const { orderId, totalAmount, customerId } = event;
-
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const paymentSuccessful = Math.random() > 0.1; // 90% success rate
-
-    if (!paymentSuccessful) {
-        throw new Error('Payment processing failed');
-    }
-
-    return {
-        ...event,
-        paymentId: `PAY-${Date.now()}`,
-        paymentStatus: 'completed',
-        paidAt: new Date().toISOString()
-    };
-};
-EOF
-
-    # Ship order Lambda
-    cat << 'EOF' > "$lambda_dir/shipping.js"
-exports.handler = async (event) => {
-    console.log('Processing shipping:', JSON.stringify(event));
-    const { orderId, customerId } = event;
-
-    // Simulate shipping processing
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    return {
-        ...event,
-        trackingNumber: `TRACK-${Date.now()}`,
-        shippingStatus: 'shipped',
-        estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        shippedAt: new Date().toISOString()
-    };
-};
-EOF
-
-    # Notify customer Lambda
-    cat << 'EOF' > "$lambda_dir/notify.js"
-exports.handler = async (event) => {
-    console.log('Sending notification:', JSON.stringify(event));
-    const { orderId, customerId, trackingNumber, paymentStatus, shippingStatus } = event;
-
-    console.log(`Notification sent to customer ${customerId}:`, {
-        orderId,
-        paymentStatus,
-        shippingStatus,
-        trackingNumber
-    });
-
-    return {
-        ...event,
-        notified: true,
-        notifiedAt: new Date().toISOString(),
-        message: 'Order confirmation sent successfully'
-    };
-};
-EOF
+    # Copy Lambda source files from local directory
+    cp "$lambda_src_dir/validate.js" "$lambda_dir/"
+    cp "$lambda_src_dir/payment.js" "$lambda_dir/"
+    cp "$lambda_src_dir/shipping.js" "$lambda_dir/"
+    cp "$lambda_src_dir/notify.js" "$lambda_dir/"
 
     # Deploy Lambda functions
     local lambdas=("validate" "payment" "shipping" "notify")
@@ -290,18 +211,32 @@ EOF
         aws iam create-role --role-name "$role_name" --assume-role-policy-document "$trust" 2>/dev/null || true
         aws iam attach-role-policy --role-name "$role_name" --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole 2>/dev/null || true
 
-        sleep 3
+        sleep 10
 
-        aws lambda create-function \
-            --function-name "$func_name" \
-            --runtime "$DEFAULT_RUNTIME" \
-            --handler index.handler \
-            --role "arn:aws:iam::$account_id:role/$role_name" \
-            --zip-file "fileb://${func}.zip" \
-            --timeout 30 2>/dev/null || \
-        aws lambda update-function-code \
-            --function-name "$func_name" \
-            --zip-file "fileb://${func}.zip"
+        # Try to create or update Lambda function with retry
+        local max_retries=3
+        local retry_count=0
+        while [ $retry_count -lt $max_retries ]; do
+            if aws lambda create-function \
+                --function-name "$func_name" \
+                --runtime "$DEFAULT_RUNTIME" \
+                --handler index.handler \
+                --role "arn:aws:iam::$account_id:role/$role_name" \
+                --zip-file "fileb://${func}.zip" \
+                --timeout 30 2>/dev/null; then
+                break
+            elif aws lambda update-function-code \
+                --function-name "$func_name" \
+                --zip-file "fileb://${func}.zip" 2>/dev/null; then
+                break
+            else
+                retry_count=$((retry_count + 1))
+                if [ $retry_count -lt $max_retries ]; then
+                    log_info "Waiting for IAM role propagation... (retry $retry_count/$max_retries)"
+                    sleep 5
+                fi
+            fi
+        done
 
         rm index.js
         cd - > /dev/null
@@ -315,79 +250,24 @@ EOF
 
     # Create Step Functions state machine
     log_step "Creating Step Functions state machine..."
-    local definition=$(cat << EOF
-{
-    "Comment": "Order processing workflow triggered by EventBridge",
-    "StartAt": "ValidateOrder",
-    "States": {
-        "ValidateOrder": {
-            "Type": "Task",
-            "Resource": "${validate_arn}",
-            "Next": "ProcessPayment",
-            "Catch": [{
-                "ErrorEquals": ["States.ALL"],
-                "Next": "OrderFailed"
-            }]
-        },
-        "ProcessPayment": {
-            "Type": "Task",
-            "Resource": "${payment_arn}",
-            "Next": "ShipOrder",
-            "Retry": [{
-                "ErrorEquals": ["States.ALL"],
-                "MaxAttempts": 2,
-                "IntervalSeconds": 1
-            }],
-            "Catch": [{
-                "ErrorEquals": ["States.ALL"],
-                "Next": "OrderFailed"
-            }]
-        },
-        "ShipOrder": {
-            "Type": "Task",
-            "Resource": "${shipping_arn}",
-            "Next": "NotifyCustomer",
-            "Catch": [{
-                "ErrorEquals": ["States.ALL"],
-                "Next": "OrderFailed"
-            }]
-        },
-        "NotifyCustomer": {
-            "Type": "Task",
-            "Resource": "${notify_arn}",
-            "End": true
-        },
-        "OrderFailed": {
-            "Type": "Fail",
-            "Error": "OrderProcessingFailed",
-            "Cause": "An error occurred during order processing"
-        }
-    }
-}
-EOF
-)
+    local sfn_template="$SCRIPT_DIR/step_function/order-workflow.json"
+    local definition=$(sed -e "s|\${VALIDATE_ARN}|${validate_arn}|g" \
+                           -e "s|\${PAYMENT_ARN}|${payment_arn}|g" \
+                           -e "s|\${SHIPPING_ARN}|${shipping_arn}|g" \
+                           -e "s|\${NOTIFY_ARN}|${notify_arn}|g" \
+                           "$sfn_template")
 
     # Create Step Functions role
     local sfn_role="${name}-sfn-role"
     local sfn_trust='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"states.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
     aws iam create-role --role-name "$sfn_role" --assume-role-policy-document "$sfn_trust" 2>/dev/null || true
 
-    local sfn_policy=$(cat << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [{
-        "Effect": "Allow",
-        "Action": ["lambda:InvokeFunction"],
-        "Resource": [
-            "${validate_arn}",
-            "${payment_arn}",
-            "${shipping_arn}",
-            "${notify_arn}"
-        ]
-    }]
-}
-EOF
-)
+    local sfn_policy_template="$SCRIPT_DIR/iam/sfn-invoke-policy.json"
+    local sfn_policy=$(sed -e "s|\${VALIDATE_ARN}|${validate_arn}|g" \
+                           -e "s|\${PAYMENT_ARN}|${payment_arn}|g" \
+                           -e "s|\${SHIPPING_ARN}|${shipping_arn}|g" \
+                           -e "s|\${NOTIFY_ARN}|${notify_arn}|g" \
+                           "$sfn_policy_template")
     aws iam put-role-policy --role-name "$sfn_role" --policy-name "${name}-sfn-invoke" --policy-document "$sfn_policy"
 
     sleep 10
@@ -407,17 +287,8 @@ EOF
     local eb_trust='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"events.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
     aws iam create-role --role-name "$eb_role" --assume-role-policy-document "$eb_trust" 2>/dev/null || true
 
-    local eb_policy=$(cat << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [{
-        "Effect": "Allow",
-        "Action": ["states:StartExecution"],
-        "Resource": ["$sfn_arn"]
-    }]
-}
-EOF
-)
+    local eb_policy_template="$SCRIPT_DIR/iam/eventbridge-sfn-policy.json"
+    local eb_policy=$(sed -e "s|\${SFN_ARN}|${sfn_arn}|g" "$eb_policy_template")
     aws iam put-role-policy --role-name "$eb_role" --policy-name "${name}-sfn-start" --policy-document "$eb_policy"
 
     sleep 5

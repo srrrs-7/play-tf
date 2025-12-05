@@ -1,0 +1,64 @@
+{
+    "Comment": "Order processing workflow triggered by EventBridge",
+    "StartAt": "ValidateOrder",
+    "States": {
+        "ValidateOrder": {
+            "Type": "Task",
+            "Resource": "${VALIDATE_ARN}",
+            "Next": "ProcessPayment",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "OrderFailed"
+                }
+            ]
+        },
+        "ProcessPayment": {
+            "Type": "Task",
+            "Resource": "${PAYMENT_ARN}",
+            "Next": "ShipOrder",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "MaxAttempts": 2,
+                    "IntervalSeconds": 1
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "OrderFailed"
+                }
+            ]
+        },
+        "ShipOrder": {
+            "Type": "Task",
+            "Resource": "${SHIPPING_ARN}",
+            "Next": "NotifyCustomer",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "OrderFailed"
+                }
+            ]
+        },
+        "NotifyCustomer": {
+            "Type": "Task",
+            "Resource": "${NOTIFY_ARN}",
+            "End": true
+        },
+        "OrderFailed": {
+            "Type": "Fail",
+            "Error": "OrderProcessingFailed",
+            "Cause": "An error occurred during order processing"
+        }
+    }
+}

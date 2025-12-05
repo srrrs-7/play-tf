@@ -1,0 +1,17 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "${VALIDATE_ARN}",
+                "${PAYMENT_ARN}",
+                "${SHIPPING_ARN}",
+                "${NOTIFY_ARN}"
+            ]
+        }
+    ]
+}
