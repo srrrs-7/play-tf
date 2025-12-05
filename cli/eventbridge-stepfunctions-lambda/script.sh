@@ -325,7 +325,7 @@ deploy() {
     echo "    \"EventBusName\": \"${name}-bus\","
     echo "    \"Source\": \"order.service\","
     echo "    \"DetailType\": \"OrderCreated\","
-    echo "    \"Detail\": \"{\\\"orderId\\\": \\\"ORD-001\\\", \\\"customerId\\\": \\\"CUST-123\\\", \\\"items\\\": [{\\\"name\\\": \\\"Product A\\\", \\\"price\\\": 29.99, \\\"quantity\\\": 2}]}\""
+    echo "    \"Detail\": \"{\\\"orderId\\\": \\\"ORD-001\\\", \\\"items\\\": [{\\\"name\\\": \\\"Product A\\\", \\\"price\\\": 29.99, \\\"quantity\\\": 2}]}\""
     echo "  }]'"
     echo ""
     echo "Check execution:"
