@@ -378,6 +378,8 @@ aws ssm describe-instance-information
 
 ### インターネットにアクセスできない
 
+#### 基本確認
+
 1. NAT Instanceが起動しているか確認
 2. NAT InstanceのSource/Destination Checkが無効になっているか確認
 3. プライベートサブネットのルートテーブルに`0.0.0.0/0 → NAT Instance`のルートがあるか確認
@@ -393,13 +395,116 @@ aws ec2 describe-instances --instance-ids i-nat-xxxxx \
 
 # ルートテーブルの確認
 aws ec2 describe-route-tables --route-table-ids rtb-private-xxxxx
+```
 
-# NAT Instance内でのトラブルシューティング（NAT Instanceに接続して実行）
+#### EC2から詳細診断（推奨）
+
+Session Manager経由でEC2に接続し、以下のコマンドで詳細診断を実行：
+
+```bash
+# EC2にSession Manager経由で接続
+aws ssm start-session --target i-ec2-xxxxx
+
+# === 以下、EC2内で実行 ===
+
+# NAT InstanceのプライベートIPを確認（例: 10.0.0.208）
+NAT_IP="10.0.0.208"
+
+# 1. NAT Instanceへの到達性確認
+echo "=== NAT Instanceへのping ==="
+ping -c 3 $NAT_IP
+
+# 2. インターネットへのルート確認
+echo "=== インターネットへのtraceroute ==="
+traceroute -n 8.8.8.8
+
+# 3. DNS解決の確認
+echo "=== DNS解決確認 ==="
+nslookup github.com
+dig github.com
+
+# 4. DNS設定の確認
+echo "=== DNS設定 ==="
+cat /etc/resolv.conf
+
+# 5. IPアドレスで直接アクセス（DNS問題を除外）
+echo "=== CloudflareへのHTTPアクセス ==="
+curl --connect-timeout 5 -I http://1.1.1.1
+
+# 6. HTTPSアクセス確認
+echo "=== GitHubへのHTTPSアクセス ==="
+curl --connect-timeout 10 -I https://github.com
+
+# 7. タイムアウト時間を短く設定して再試行
+curl --connect-timeout 5 --max-time 10 -v https://github.com
+```
+
+#### NAT Instance内部の確認（SSH経由）
+
+NAT Instanceに直接アクセスして内部設定を確認：
+
+```bash
+# 1. NAT InstanceのSGにSSHを一時的に許可
+NAT_SG_ID=$(aws ec2 describe-instances --instance-ids i-nat-xxxxx \
+    --query 'Reservations[0].Instances[0].SecurityGroups[0].GroupId' --output text)
+
+aws ec2 authorize-security-group-ingress \
+    --group-id $NAT_SG_ID \
+    --protocol tcp \
+    --port 22 \
+    --cidr 10.0.0.0/16
+
+# 2. EC2からNAT InstanceへSSH（キーが必要）
+ssh ec2-user@$NAT_IP
+
+# === 以下、NAT Instance内で実行 ===
+
 # IPフォワーディングが有効か確認
+echo "=== IP Forwarding ==="
 sysctl net.ipv4.ip_forward
+# 期待値: net.ipv4.ip_forward = 1
 
-# iptablesルールの確認
+# iptables NATルールの確認
+echo "=== iptables NAT Rules ==="
 sudo iptables -t nat -L -n -v
+
+# 期待される出力:
+# Chain POSTROUTING (policy ACCEPT ...)
+# MASQUERADE  all  --  *  eth0  0.0.0.0/0  0.0.0.0/0
+
+# iptables FORWARDチェーンの確認
+echo "=== iptables FORWARD Chain ==="
+sudo iptables -L FORWARD -n -v
+
+# ネットワークインターフェースの確認
+echo "=== Network Interfaces ==="
+ip addr show
+
+# デフォルトゲートウェイの確認
+echo "=== Default Gateway ==="
+ip route show
+
+# インターネット接続の確認
+echo "=== Internet Connectivity ==="
+curl -I http://www.google.com
+```
+
+#### NAT Instanceの再起動・再作成
+
+問題が解決しない場合、NAT Instanceを再作成：
+
+```bash
+# 1. 現在のNAT Instanceを削除
+./script.sh nat-delete i-nat-xxxxx
+
+# 2. 新しいNAT Instanceを作成
+./script.sh nat-create my-stack-nat <public-subnet-id> <nat-sg-id>
+
+# 3. 新しいインスタンスIDでルートを更新
+aws ec2 replace-route \
+    --route-table-id rtb-private-xxxxx \
+    --destination-cidr-block 0.0.0.0/0 \
+    --instance-id i-new-nat-xxxxx
 ```
 
 ### S3にアクセスできない
