@@ -211,6 +211,9 @@ Each architecture script provides `deploy`, `destroy`, and `status` commands plu
 - `eventbridge-stepfunctions-ecs/` - Event-driven ECS tasks
 - `s3-eventbridge-stepfunctions-lambda/` - S3 event workflows
 
+**VPC & Private Networking:**
+- `ec2-vpc-s3-endpoint/` - EC2 in private subnet with VPC Endpoints for S3 and Session Manager
+
 **Other:**
 - `amplify-hosting/` - Full-stack web app hosting
 - `apigw-websocket-lambda-dynamodb/` - WebSocket real-time apps
