@@ -12,6 +12,10 @@ source "$SCRIPT_DIR/../lib/common.sh"
 DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-northeast-1}
 DEFAULT_RUNTIME="nodejs18.x"
 
+# External resource directories
+LAMBDA_DIR="$SCRIPT_DIR/lambda"
+IAM_DIR="$SCRIPT_DIR/iam"
+
 usage() {
     echo "Usage: $0 <command> [options]"
     echo ""
@@ -175,9 +179,9 @@ lambda_create() {
 
     local account_id=$(get_account_id)
     local role_name="${name}-role"
+    local trust_policy="$IAM_DIR/lambda-trust-policy.json"
 
-    local trust='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-    aws iam create-role --role-name "$role_name" --assume-role-policy-document "$trust" 2>/dev/null || true
+    aws iam create-role --role-name "$role_name" --assume-role-policy-document "file://$trust_policy" 2>/dev/null || true
     aws iam attach-role-policy --role-name "$role_name" --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole 2>/dev/null || true
     aws iam attach-role-policy --role-name "$role_name" --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole 2>/dev/null || true
 
@@ -260,12 +264,13 @@ deploy() {
     # Create IAM role for API Gateway to send messages to SQS
     log_step "Creating API Gateway role..."
     local apigw_role_name="${name}-apigw-sqs-role"
-    local apigw_trust='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"apigateway.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+    local apigw_trust_policy="$IAM_DIR/apigw-trust-policy.json"
+    local sqs_policy_template="$IAM_DIR/sqs-send-policy.json"
 
-    aws iam create-role --role-name "$apigw_role_name" --assume-role-policy-document "$apigw_trust" 2>/dev/null || true
+    aws iam create-role --role-name "$apigw_role_name" --assume-role-policy-document "file://$apigw_trust_policy" 2>/dev/null || true
 
-    # Create inline policy for SQS access
-    local sqs_policy="{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"sqs:SendMessage\"],\"Resource\":\"$queue_arn\"}]}"
+    # Create inline policy for SQS access (replace placeholder with actual queue ARN)
+    local sqs_policy=$(sed "s|{{QUEUE_ARN}}|$queue_arn|g" "$sqs_policy_template")
     aws iam put-role-policy --role-name "$apigw_role_name" --policy-name "sqs-send" --policy-document "$sqs_policy" 2>/dev/null || true
 
     local apigw_role_arn="arn:aws:iam::$account_id:role/$apigw_role_name"
@@ -273,46 +278,17 @@ deploy() {
 
     # Create Lambda function
     log_step "Creating Lambda function..."
-    local lambda_dir="/tmp/${name}-lambda"
-    mkdir -p "$lambda_dir"
+    local tmp_dir="/tmp/${name}-lambda"
+    local lambda_src="$LAMBDA_DIR/processor.js"
+    mkdir -p "$tmp_dir"
 
-    cat << 'EOF' > "$lambda_dir/index.js"
-exports.handler = async (event) => {
-    console.log('Processing', event.Records.length, 'messages from SQS');
-
-    const results = [];
-    for (const record of event.Records) {
-        try {
-            const body = JSON.parse(record.body);
-            console.log('Processing message:', record.messageId);
-            console.log('Message body:', JSON.stringify(body, null, 2));
-
-            // Add your business logic here
-            const result = {
-                messageId: record.messageId,
-                body: body,
-                processedAt: new Date().toISOString(),
-                status: 'success'
-            };
-
-            results.push(result);
-            console.log('Processed successfully:', record.messageId);
-        } catch (error) {
-            console.error('Error processing message:', record.messageId, error);
-            throw error; // Rethrow to trigger retry/DLQ
-        }
-    }
-
-    console.log('Processed', results.length, 'messages');
-    return { batchItemFailures: [] };
-};
-EOF
-
-    cd "$lambda_dir" && zip -r function.zip index.js && cd - > /dev/null
+    # Copy Lambda source from external file
+    cp "$lambda_src" "$tmp_dir/index.js"
+    cd "$tmp_dir" && zip -r function.zip index.js && cd - > /dev/null
 
     local lambda_role_name="${name}-processor-role"
-    local lambda_trust='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-    aws iam create-role --role-name "$lambda_role_name" --assume-role-policy-document "$lambda_trust" 2>/dev/null || true
+    local lambda_trust_policy="$IAM_DIR/lambda-trust-policy.json"
+    aws iam create-role --role-name "$lambda_role_name" --assume-role-policy-document "file://$lambda_trust_policy" 2>/dev/null || true
     aws iam attach-role-policy --role-name "$lambda_role_name" --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole 2>/dev/null || true
     aws iam attach-role-policy --role-name "$lambda_role_name" --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole 2>/dev/null || true
 
@@ -323,12 +299,12 @@ EOF
         --runtime "$DEFAULT_RUNTIME" \
         --handler index.handler \
         --role "arn:aws:iam::$account_id:role/$lambda_role_name" \
-        --zip-file "fileb://$lambda_dir/function.zip" \
+        --zip-file "fileb://$tmp_dir/function.zip" \
         --timeout 30 \
         --memory-size 256 2>/dev/null || \
     aws lambda update-function-code \
         --function-name "${name}-processor" \
-        --zip-file "fileb://$lambda_dir/function.zip"
+        --zip-file "fileb://$tmp_dir/function.zip"
 
     # Add SQS trigger to Lambda
     log_step "Adding SQS trigger to Lambda..."
@@ -433,7 +409,7 @@ EOF
 
     local api_url="https://$api_id.execute-api.$region.amazonaws.com/prod"
 
-    rm -rf "$lambda_dir"
+    rm -rf "$tmp_dir"
 
     echo ""
     echo -e "${GREEN}Deployment complete!${NC}"
