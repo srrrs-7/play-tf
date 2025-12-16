@@ -688,40 +688,83 @@ nat_instance_create() {
 
     # User data script to configure NAT
     local user_data='#!/bin/bash
-# Configure as NAT instance
+# =============================================================================
+# NAT Instance Configuration Script
+# =============================================================================
+exec > /var/log/nat-setup.log 2>&1
+set -x
+
+echo "Starting NAT configuration at $(date)"
+
+# Wait for network to be ready
+sleep 10
+
+# Enable IP Forwarding
+echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/99-nat.conf
+sysctl -p /etc/sysctl.d/99-nat.conf
 sysctl -w net.ipv4.ip_forward=1
-echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
 
-# Configure iptables for NAT
-/sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+# Verify IP Forwarding is enabled
+echo "IP Forward value: $(cat /proc/sys/net/ipv4/ip_forward)"
 
-# Flush FORWARD chain and set ACCEPT policy
-/sbin/iptables -F FORWARD
-/sbin/iptables -P FORWARD ACCEPT
+# Install iptables (for Amazon Linux 2023)
+dnf install -y iptables-nft iptables-services || yum install -y iptables-services || true
 
-# Explicitly allow forwarding from VPC
-/sbin/iptables -A FORWARD -i eth0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-/sbin/iptables -A FORWARD -i eth0 -o eth0 -j ACCEPT
+# Dynamically detect primary network interface
+# Use interface where default route points to
+PRIMARY_IF=$(ip route | grep default | awk "{print \$5}" | head -1)
+if [ -z "$PRIMARY_IF" ]; then
+    # Fallback: use first non-lo interface
+    PRIMARY_IF=$(ip -o link show | grep -v lo | awk -F": " "{print \$2}" | head -1)
+fi
+echo "Detected primary interface: $PRIMARY_IF"
+
+# Clear existing rules
+iptables -F 2>/dev/null || true
+iptables -t nat -F 2>/dev/null || true
+iptables -X 2>/dev/null || true
+
+# Set default policy to ACCEPT
+iptables -P INPUT ACCEPT 2>/dev/null || true
+iptables -P FORWARD ACCEPT 2>/dev/null || true
+iptables -P OUTPUT ACCEPT 2>/dev/null || true
+
+# Configure NAT (MASQUERADE)
+if [ -n "$PRIMARY_IF" ]; then
+    iptables -t nat -A POSTROUTING -o "$PRIMARY_IF" -j MASQUERADE
+    echo "MASQUERADE rule added for interface: $PRIMARY_IF"
+else
+    echo "ERROR: Could not detect primary network interface"
+    # Fallback: try both
+    iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE 2>/dev/null || true
+    iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
+fi
+
+# Add explicit FORWARD rules
+iptables -A FORWARD -i "$PRIMARY_IF" -o "$PRIMARY_IF" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+iptables -A FORWARD -j ACCEPT 2>/dev/null || true
 
 # Persist iptables rules
 mkdir -p /etc/sysconfig
-iptables-save > /etc/sysconfig/iptables
+iptables-save > /etc/sysconfig/iptables 2>/dev/null || true
 
-# Create systemd service to restore iptables on boot
-cat > /etc/systemd/system/iptables-restore.service << EOF
-[Unit]
-Description=Restore iptables rules
-After=network.target
+# Enable iptables service
+systemctl enable iptables 2>/dev/null || true
+systemctl start iptables 2>/dev/null || true
 
-[Service]
-Type=oneshot
-ExecStart=/usr/sbin/iptables-restore /etc/sysconfig/iptables
+# Verify configuration
+echo "=== IP Forward Status ==="
+cat /proc/sys/net/ipv4/ip_forward
+echo "=== iptables NAT rules ==="
+iptables -t nat -L -v -n 2>/dev/null || echo "iptables not available"
+echo "=== iptables FORWARD rules ==="
+iptables -L FORWARD -v -n 2>/dev/null || echo "iptables not available"
+echo "=== Network interfaces ==="
+ip addr show
+echo "=== Route table ==="
+ip route show
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl enable iptables-restore.service
+echo "NAT Instance configuration completed at $(date)"
 '
 
     # Create NAT instance
