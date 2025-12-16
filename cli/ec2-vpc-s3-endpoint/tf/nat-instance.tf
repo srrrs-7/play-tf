@@ -25,44 +25,54 @@ resource "aws_instance" "nat" {
     # =============================================================================
     # NAT Instance Configuration Script
     # =============================================================================
+    exec > /var/log/nat-setup.log 2>&1
+    set -x
+
+    echo "Starting NAT configuration at $(date)"
 
     # IP Forwardingを有効化
-    echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+    echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/99-nat.conf
+    sysctl -p /etc/sysctl.d/99-nat.conf
     sysctl -w net.ipv4.ip_forward=1
 
-    # iptablesでNAT（MASQUERADE）を設定
-    /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+    # iptablesをインストール（Amazon Linux 2023用）
+    dnf install -y iptables-nft iptables-services || yum install -y iptables-services
 
-    # FORWARDチェーンをフラッシュしてACCEPTポリシーを設定
-    /sbin/iptables -F FORWARD
-    /sbin/iptables -P FORWARD ACCEPT
+    # 既存ルールをクリア
+    iptables -F
+    iptables -t nat -F
+    iptables -X
 
-    # VPCからのフォワーディングを明示的に許可
-    /sbin/iptables -A FORWARD -i eth0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-    /sbin/iptables -A FORWARD -i eth0 -o eth0 -j ACCEPT
+    # デフォルトポリシーをACCEPTに設定
+    iptables -P INPUT ACCEPT
+    iptables -P FORWARD ACCEPT
+    iptables -P OUTPUT ACCEPT
 
-    # iptablesルールを永続化
+    # NAT（MASQUERADE）を設定 - VPC CIDRからのトラフィックのみ
+    iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE 2>/dev/null || \
+    iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+    # ルールを永続化
     mkdir -p /etc/sysconfig
     iptables-save > /etc/sysconfig/iptables
 
-    # systemdサービスを作成してブート時にiptablesを復元
-    cat > /etc/systemd/system/iptables-restore.service << 'SVCEOF'
-    [Unit]
-    Description=Restore iptables rules
-    After=network.target
+    # iptablesサービスを有効化
+    systemctl enable iptables 2>/dev/null || true
+    systemctl start iptables 2>/dev/null || true
 
-    [Service]
-    Type=oneshot
-    ExecStart=/usr/sbin/iptables-restore /etc/sysconfig/iptables
+    # 設定確認
+    echo "=== IP Forward Status ==="
+    cat /proc/sys/net/ipv4/ip_forward
+    echo "=== iptables NAT rules ==="
+    iptables -t nat -L -v -n
+    echo "=== iptables FORWARD rules ==="
+    iptables -L FORWARD -v -n
+    echo "=== Network interfaces ==="
+    ip addr show
+    echo "=== Route table ==="
+    ip route show
 
-    [Install]
-    WantedBy=multi-user.target
-    SVCEOF
-
-    systemctl enable iptables-restore.service
-
-    # ログ出力
-    echo "NAT Instance configuration completed at $(date)" >> /var/log/nat-setup.log
+    echo "NAT Instance configuration completed at $(date)"
   EOF
   )
 
