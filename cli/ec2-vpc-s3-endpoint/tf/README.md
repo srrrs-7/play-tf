@@ -97,7 +97,7 @@ aws ssm start-session --target i-xxxxxxxxx
 ```bash
 # インターネットアクセス確認（NAT Instance経由）
 ping -c 3 8.8.8.8
-curl -I https://github.com
+
 
 # S3アクセス確認（VPC Endpoint経由）
 aws s3 ls

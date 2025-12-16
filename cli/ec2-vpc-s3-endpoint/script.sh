@@ -694,7 +694,14 @@ echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
 
 # Configure iptables for NAT
 /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+# Flush FORWARD chain and set ACCEPT policy
 /sbin/iptables -F FORWARD
+/sbin/iptables -P FORWARD ACCEPT
+
+# Explicitly allow forwarding from VPC
+/sbin/iptables -A FORWARD -i eth0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+/sbin/iptables -A FORWARD -i eth0 -o eth0 -j ACCEPT
 
 # Persist iptables rules
 mkdir -p /etc/sysconfig

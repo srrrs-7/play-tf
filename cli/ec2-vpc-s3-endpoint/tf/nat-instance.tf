@@ -32,7 +32,14 @@ resource "aws_instance" "nat" {
 
     # iptablesでNAT（MASQUERADE）を設定
     /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+    # FORWARDチェーンをフラッシュしてACCEPTポリシーを設定
     /sbin/iptables -F FORWARD
+    /sbin/iptables -P FORWARD ACCEPT
+
+    # VPCからのフォワーディングを明示的に許可
+    /sbin/iptables -A FORWARD -i eth0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+    /sbin/iptables -A FORWARD -i eth0 -o eth0 -j ACCEPT
 
     # iptablesルールを永続化
     mkdir -p /etc/sysconfig

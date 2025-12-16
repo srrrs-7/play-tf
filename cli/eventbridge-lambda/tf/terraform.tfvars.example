@@ -1,0 +1,83 @@
+# =============================================================================
+# EventBridge → Lambda Architecture
+# =============================================================================
+# このファイルをコピーして terraform.tfvars を作成してください:
+#   cp terraform.tfvars.example terraform.tfvars
+
+# =============================================================================
+# General Settings
+# =============================================================================
+
+aws_region   = "ap-northeast-1"
+project_name = "eventbridge-lambda"
+environment  = "dev"
+stack_name   = "my-events"
+
+# =============================================================================
+# EventBridge Settings
+# =============================================================================
+
+# カスタムイベントバスを作成するか（falseの場合はdefaultバスを使用）
+create_custom_event_bus = true
+
+# イベントパターン（JSONフォーマット）
+# すべてのイベントをキャッチ
+event_pattern = <<-EOF
+{
+  "source": [{"prefix": ""}]
+}
+EOF
+
+# 特定のソースとイベントタイプをフィルタリングする場合の例:
+# event_pattern = <<-EOF
+# {
+#   "source": ["my.application"],
+#   "detail-type": ["OrderCreated", "OrderUpdated"]
+# }
+# EOF
+
+# さらに詳細なフィルタリング:
+# event_pattern = <<-EOF
+# {
+#   "source": ["my.application"],
+#   "detail-type": ["OrderCreated"],
+#   "detail": {
+#     "status": ["pending", "processing"],
+#     "amount": [{"numeric": [">=", 100]}]
+#   }
+# }
+# EOF
+
+rule_description = "Rule to trigger Lambda on events"
+
+# =============================================================================
+# Lambda Settings
+# =============================================================================
+
+lambda_runtime     = "nodejs18.x"
+lambda_handler     = "index.handler"
+lambda_timeout     = 30
+lambda_memory_size = 256
+
+# カスタムLambdaソースコードのパス（nullの場合はデフォルトのインラインコードを使用）
+# lambda_source_path = "./lambda"
+lambda_source_path = null
+
+# Lambda環境変数
+lambda_environment_variables = {
+  # MY_CONFIG = "value"
+}
+
+# =============================================================================
+# Logging Settings
+# =============================================================================
+
+log_retention_days = 30
+
+# =============================================================================
+# Tags
+# =============================================================================
+
+tags = {
+  Owner = "your-name"
+}
