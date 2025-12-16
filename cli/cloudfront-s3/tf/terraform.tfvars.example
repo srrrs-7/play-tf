@@ -1,0 +1,96 @@
+# =============================================================================
+# CloudFront → S3 Static Website Architecture
+# =============================================================================
+# このファイルをコピーして terraform.tfvars を作成してください:
+#   cp terraform.tfvars.example terraform.tfvars
+
+# =============================================================================
+# General Settings
+# =============================================================================
+
+# AWSリージョン
+aws_region = "ap-northeast-1"
+
+# プロジェクト名（リソース名のプレフィックスに使用）
+project_name = "cloudfront-s3"
+
+# 環境名
+environment = "dev"
+
+# スタック名（必須）
+stack_name = "my-website"
+
+# =============================================================================
+# S3 Settings
+# =============================================================================
+
+# S3バケット名（nullの場合は自動生成）
+# s3_bucket_name = "my-custom-bucket-name"
+s3_bucket_name = null
+
+# インデックスドキュメント
+index_document = "index.html"
+
+# エラードキュメント
+error_document = "error.html"
+
+# バージョニングを有効にするか
+enable_versioning = false
+
+# =============================================================================
+# CloudFront Settings
+# =============================================================================
+
+# 価格クラス
+# - PriceClass_100: 北米・欧州のみ（最安）
+# - PriceClass_200: 北米・欧州・アジア（日本含む）
+# - PriceClass_All: 全エッジロケーション
+price_class = "PriceClass_200"
+
+# キャッシュTTL設定（秒）
+default_ttl = 86400    # 1日
+max_ttl     = 31536000 # 1年
+min_ttl     = 0
+
+# コンテンツ圧縮
+compress = true
+
+# ビューワープロトコルポリシー
+# - allow-all: HTTP/HTTPS両方許可
+# - https-only: HTTPSのみ
+# - redirect-to-https: HTTPをHTTPSにリダイレクト
+viewer_protocol_policy = "redirect-to-https"
+
+# 最小TLSプロトコルバージョン
+minimum_protocol_version = "TLSv1.2_2021"
+
+# =============================================================================
+# SPA (Single Page Application) Settings
+# =============================================================================
+
+# SPAモードを有効にするか（404/403をindex.htmlにリダイレクト）
+enable_spa_mode = true
+
+# SPAモードでのエラーキャッシュ最小TTL（秒）
+spa_error_caching_min_ttl = 300
+
+# =============================================================================
+# Custom Domain Settings (Optional)
+# =============================================================================
+
+# カスタムドメイン（オプション）
+# domain_names = ["www.example.com", "example.com"]
+domain_names = []
+
+# ACM証明書ARN（カスタムドメイン使用時に必要）
+# 注意: us-east-1リージョンの証明書が必要
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxx"
+acm_certificate_arn = null
+
+# =============================================================================
+# Tags
+# =============================================================================
+
+tags = {
+  Owner = "your-name"
+}
