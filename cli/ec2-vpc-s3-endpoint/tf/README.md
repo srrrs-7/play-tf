@@ -198,6 +198,7 @@ aws ec2 describe-vpc-endpoints --query 'VpcEndpoints[].{ID:VpcEndpointId,Service
 
 1. NAT Instanceが起動しているか確認
 2. プライベートサブネットのルートテーブルにNATルートがあるか確認
+3. NAT InstanceのIP Forwarding/iptablesが正しく設定されているか確認
 
 ```bash
 # NAT Instanceの状態確認
@@ -206,6 +207,83 @@ aws ec2 describe-instances --filters "Name=tag:Role,Values=NAT" --query 'Reserva
 # ルートテーブル確認
 terraform output private_route_table_id
 aws ec2 describe-route-tables --route-table-ids <route-table-id>
+```
+
+### NAT Instance詳細デバッグ
+
+NAT Instance経由でcurlがタイムアウトする場合、NAT Instanceに接続して設定を確認してください：
+
+```bash
+# NAT InstanceにSession Manager経由で接続
+aws ssm start-session --target <nat-instance-id>
+
+# 設定ログを確認（起動時のスクリプト実行結果）
+sudo cat /var/log/nat-setup.log
+
+# IP Forwardingが有効か確認（1であるべき）
+cat /proc/sys/net/ipv4/ip_forward
+
+# iptables NAT ルールを確認（MASQUERADEルールがあるべき）
+sudo iptables -t nat -L -v -n
+
+# iptables FORWARD ルールを確認（ポリシーがACCEPTであるべき）
+sudo iptables -L FORWARD -v -n
+
+# ネットワークインターフェースを確認
+ip addr show
+
+# ルートテーブルを確認
+ip route show
+```
+
+#### 正常な状態の例
+
+```bash
+# IP Forward
+$ cat /proc/sys/net/ipv4/ip_forward
+1
+
+# NAT ルール（ens5またはeth0にMASQUERADEがある）
+$ sudo iptables -t nat -L POSTROUTING -v -n
+Chain POSTROUTING (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+    0     0 MASQUERADE  all  --  *      ens5    0.0.0.0/0            0.0.0.0/0
+
+# FORWARD ポリシー
+$ sudo iptables -L FORWARD -v -n
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+```
+
+#### 手動で修正する場合
+
+```bash
+# IP Forwarding を有効化
+sudo sysctl -w net.ipv4.ip_forward=1
+
+# プライマリインターフェースを検出
+PRIMARY_IF=$(ip route | grep default | awk '{print $5}')
+echo "Primary interface: $PRIMARY_IF"
+
+# iptablesをインストール（Amazon Linux 2023）
+sudo dnf install -y iptables-nft iptables-services
+
+# NAT設定
+sudo iptables -t nat -A POSTROUTING -o $PRIMARY_IF -j MASQUERADE
+sudo iptables -P FORWARD ACCEPT
+
+# 設定を永続化
+sudo mkdir -p /etc/sysconfig
+sudo iptables-save | sudo tee /etc/sysconfig/iptables
+```
+
+#### NAT Instanceを再作成する場合
+
+```bash
+# Terraformで再作成
+terraform taint 'aws_instance.nat[0]'
+terraform apply
+
+# 起動後2-3分待ってからテスト
 ```
 
 ### S3にアクセスできない
