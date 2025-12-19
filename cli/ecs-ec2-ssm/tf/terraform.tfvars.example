@@ -1,0 +1,48 @@
+# =============================================================================
+# ECS on EC2 with Session Manager - Example Variables
+# =============================================================================
+# Copy this file to terraform.tfvars and customize values
+
+# Required
+stack_name = "my-app"
+
+# General Settings
+aws_region   = "ap-northeast-1"
+project_name = "ecs-ec2-ssm"
+environment  = "dev"
+
+# VPC Settings
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+
+# EC2 Settings
+instance_type    = "t3.micro"
+root_volume_size = 30
+
+# Auto Scaling Group Settings
+asg_min_size            = 1
+asg_max_size            = 2
+asg_desired_capacity    = 1
+enable_managed_scaling  = true
+target_capacity_percent = 100
+
+# ECS Settings
+container_image           = "nginx:latest"
+container_port            = 80
+container_cpu             = 256
+container_memory          = 512
+desired_count             = 1
+create_ecs_service        = true
+enable_container_insights = true
+
+# Logging Settings
+log_retention_days         = 7
+enable_error_metric_filter = true
+enable_error_alarm         = false
+error_alarm_threshold      = 10
+
+# Additional Tags
+tags = {
+  Owner = "your-name"
+}
