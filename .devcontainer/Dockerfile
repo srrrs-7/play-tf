@@ -21,6 +21,13 @@ RUN apt-get update && apt-get install -y \
     make \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Docker CLI
+ARG DOCKER_VERSION=24.0.7
+RUN apt-get update \
+    && apt-get install -y curl \
+    && curl -fsSL "https://download.docker.com/linux/static/stable/$(uname -m)/docker-${DOCKER_VERSION}.tgz" | tar xz --strip-components=1 -C /usr/local/bin docker/docker \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Bun as vscode user
 USER vscode
 

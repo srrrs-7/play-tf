@@ -3,7 +3,10 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - distroless
   - esac
+  - ldflags
+  - nonroot
   - pipefail
   - trixie
 ignoreWords: []
