@@ -25,3 +25,6 @@ terraform.rc
 # dev container
 setup.personal.sh
 compose.override.yaml
+
+# Claude AI settings
+.claude/settings.local.json
