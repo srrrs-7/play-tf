@@ -1,0 +1,65 @@
+# =============================================================================
+# Required Variables
+# =============================================================================
+
+stack_name = "my-queue"
+
+# =============================================================================
+# General Settings (Optional)
+# =============================================================================
+
+# aws_region   = "ap-northeast-1"
+# project_name = "sqs-lambda-dynamodb"
+# environment  = "dev"
+
+# =============================================================================
+# SQS Settings (Optional)
+# =============================================================================
+
+# sqs_visibility_timeout_seconds = 60
+# sqs_message_retention_seconds  = 345600  # 4 days
+# sqs_max_message_size           = 262144  # 256 KB
+# sqs_delay_seconds              = 0
+# sqs_receive_wait_time_seconds  = 20  # Long polling
+
+# enable_dlq            = true
+# dlq_max_receive_count = 3
+
+# enable_fifo_queue                = false
+# fifo_content_based_deduplication = true
+
+# enable_sqs_encryption = true
+
+# =============================================================================
+# Lambda Settings (Optional)
+# =============================================================================
+
+# lambda_runtime               = "python3.11"
+# lambda_handler               = "index.handler"
+# lambda_memory_size           = 256
+# lambda_timeout               = 30
+# lambda_source_path           = "./my-lambda-code"
+# lambda_reserved_concurrency  = -1
+# lambda_batch_size            = 10
+# lambda_max_batching_window   = 0
+# enable_xray_tracing          = false
+
+# lambda_environment_variables = {
+#   LOG_LEVEL = "INFO"
+# }
+
+# =============================================================================
+# DynamoDB Settings (Optional)
+# =============================================================================
+
+# dynamodb_table_name    = "my-table"
+# dynamodb_billing_mode  = "PAY_PER_REQUEST"
+# dynamodb_hash_key      = "id"
+# dynamodb_hash_key_type = "S"
+# dynamodb_enable_ttl    = false
+
+# =============================================================================
+# Logging Settings (Optional)
+# =============================================================================
+
+# log_retention_days = 30

@@ -1,0 +1,70 @@
+# =============================================================================
+# Required Variables
+# =============================================================================
+
+stack_name  = "my-app"
+db_password = "your-secure-password-here"  # Change this!
+
+# =============================================================================
+# General Settings (Optional)
+# =============================================================================
+
+# aws_region   = "ap-northeast-1"
+# project_name = "cf-alb-ec2-rds"
+# environment  = "dev"
+
+# =============================================================================
+# VPC Settings (Optional)
+# =============================================================================
+
+# vpc_cidr              = "10.0.0.0/16"
+# public_subnet_cidrs   = ["10.0.1.0/24", "10.0.2.0/24"]
+# private_subnet_cidrs  = ["10.0.11.0/24", "10.0.12.0/24"]
+# database_subnet_cidrs = ["10.0.21.0/24", "10.0.22.0/24"]
+
+# =============================================================================
+# EC2 Settings (Optional)
+# =============================================================================
+
+# ec2_instance_type    = "t3.micro"
+# ec2_key_name         = null        # SSH key pair name
+# ec2_min_size         = 1
+# ec2_max_size         = 3
+# ec2_desired_capacity = 2
+# ec2_user_data        = null        # Base64 encoded user data
+
+# =============================================================================
+# ALB Settings (Optional)
+# =============================================================================
+
+# alb_internal          = false
+# health_check_path     = "/"
+# health_check_interval = 30
+
+# =============================================================================
+# RDS Settings (Optional)
+# =============================================================================
+
+# db_engine              = "mysql"     # or "postgres"
+# db_engine_version      = "8.0"       # for mysql, or "15" for postgres
+# db_instance_class      = "db.t3.micro"
+# db_allocated_storage   = 20
+# db_name                = "myapp"
+# db_username            = "admin"
+# db_multi_az            = false
+# db_skip_final_snapshot = true
+
+# =============================================================================
+# CloudFront Settings (Optional)
+# =============================================================================
+
+# cloudfront_price_class = "PriceClass_200"
+# cloudfront_default_ttl = 86400
+# cloudfront_min_ttl     = 0
+# cloudfront_max_ttl     = 31536000
+
+# =============================================================================
+# Logging Settings (Optional)
+# =============================================================================
+
+# enable_alb_access_logs = false

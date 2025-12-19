@@ -1,0 +1,57 @@
+# =============================================================================
+# Required Variables
+# =============================================================================
+
+stack_name = "my-stream"
+
+# =============================================================================
+# General Settings (Optional)
+# =============================================================================
+
+# aws_region   = "ap-northeast-1"
+# project_name = "kinesis-lambda-s3"
+# environment  = "dev"
+
+# =============================================================================
+# Kinesis Settings (Optional)
+# =============================================================================
+
+# kinesis_shard_count       = 1
+# kinesis_retention_period  = 24  # hours
+# kinesis_stream_mode       = "PROVISIONED"  # or "ON_DEMAND"
+# enable_kinesis_encryption = true
+
+# =============================================================================
+# Lambda Settings (Optional)
+# =============================================================================
+
+# lambda_runtime                = "python3.11"
+# lambda_handler                = "index.handler"
+# lambda_memory_size            = 256
+# lambda_timeout                = 60
+# lambda_source_path            = "./my-lambda-code"
+# lambda_batch_size             = 100
+# lambda_starting_position      = "LATEST"  # or "TRIM_HORIZON"
+# lambda_max_batching_window    = 0
+# lambda_parallelization_factor = 1
+# enable_xray_tracing           = false
+
+# lambda_environment_variables = {
+#   LOG_LEVEL = "INFO"
+# }
+
+# =============================================================================
+# S3 Settings (Optional)
+# =============================================================================
+
+# s3_bucket_name           = null  # Auto-generated if not specified
+# s3_force_destroy         = false
+# s3_versioning_enabled    = false
+# s3_lifecycle_expire_days = 0     # 0 to disable
+# s3_prefix                = "data/"
+
+# =============================================================================
+# Logging Settings (Optional)
+# =============================================================================
+
+# log_retention_days = 30

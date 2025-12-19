@@ -1,0 +1,53 @@
+# =============================================================================
+# Required Variables
+# =============================================================================
+
+stack_name = "my-processor"
+
+# =============================================================================
+# General Settings (Optional)
+# =============================================================================
+
+# aws_region   = "ap-northeast-1"
+# project_name = "s3-lambda-s3"
+# environment  = "dev"
+
+# =============================================================================
+# Source S3 Settings (Optional)
+# =============================================================================
+
+# source_bucket_name          = null  # Auto-generated if not specified
+# source_bucket_force_destroy = false
+# trigger_prefix              = "input/"
+# trigger_suffix              = ""     # e.g., ".json" to only trigger on JSON files
+# trigger_events              = ["s3:ObjectCreated:*"]
+
+# =============================================================================
+# Destination S3 Settings (Optional)
+# =============================================================================
+
+# dest_bucket_name          = null  # Auto-generated if not specified
+# dest_bucket_force_destroy = false
+# dest_prefix               = "output/"
+
+# =============================================================================
+# Lambda Settings (Optional)
+# =============================================================================
+
+# lambda_runtime              = "python3.11"
+# lambda_handler              = "index.handler"
+# lambda_memory_size          = 256
+# lambda_timeout              = 60
+# lambda_source_path          = "./my-lambda-code"
+# lambda_reserved_concurrency = -1
+# enable_xray_tracing         = false
+
+# lambda_environment_variables = {
+#   LOG_LEVEL = "INFO"
+# }
+
+# =============================================================================
+# Logging Settings (Optional)
+# =============================================================================
+
+# log_retention_days = 30
