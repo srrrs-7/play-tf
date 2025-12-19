@@ -1,0 +1,100 @@
+# =============================================================================
+# Required Variables
+# =============================================================================
+
+project_name = "my-private-ecs"
+environment  = "dev"
+
+# =============================================================================
+# General Settings (Optional)
+# =============================================================================
+
+# aws_region = "ap-northeast-1"
+
+# =============================================================================
+# VPC Settings (Optional)
+# =============================================================================
+
+# vpc_cidr             = "10.0.0.0/16"
+# az_count             = 2
+# availability_zones   = []  # Leave empty for auto-selection
+# private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+# endpoint_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+
+# =============================================================================
+# VPC Endpoints Settings (Optional)
+# =============================================================================
+# These endpoints are required for ECS Fargate in a private network
+
+# enable_ecr_endpoints            = true   # Required for pulling container images
+# enable_logs_endpoint            = true   # Required for CloudWatch logging
+# enable_s3_endpoint              = true   # Required for ECR image layers
+# enable_ecs_endpoints            = true   # Required for ECS control plane
+# enable_ssm_endpoints            = true   # Required for ECS Exec
+# enable_secrets_manager_endpoint = false  # Optional: for secrets
+# enable_kms_endpoint             = false  # Optional: for encryption
+
+# =============================================================================
+# ECS Settings (Optional)
+# =============================================================================
+
+# ecs_cluster_name       = ""  # Leave empty to use project_name-environment
+# container_image        = "nginx:latest"
+# container_port         = 80
+# container_cpu          = 256
+# container_memory       = 512
+# desired_count          = 2
+# min_capacity           = 1
+# max_capacity           = 4
+# enable_execute_command = true
+# health_check_path      = "/"
+# health_check_interval  = 30
+
+# =============================================================================
+# ALB Settings (Optional)
+# =============================================================================
+
+# alb_idle_timeout           = 60
+# enable_deletion_protection = false
+# enable_access_logs         = false
+# access_logs_bucket         = ""
+
+# =============================================================================
+# PrivateLink Settings (Optional)
+# =============================================================================
+# Enable to expose the service to other VPCs/accounts
+
+# enable_privatelink_service      = true
+# privatelink_acceptance_required = true
+# privatelink_allowed_principals  = [
+#   "arn:aws:iam::123456789012:root",  # Allow specific account
+#   "arn:aws:iam::987654321098:root",  # Allow another account
+# ]
+
+# =============================================================================
+# Transit Gateway Settings (Optional)
+# =============================================================================
+# Enable for Direct Connect integration
+
+# enable_transit_gateway      = false
+# transit_gateway_id          = ""  # Leave empty to create new TGW
+# transit_gateway_asn         = 64512
+# transit_gateway_cidr_blocks = [
+#   "192.168.0.0/16",   # On-premises network 1
+#   "172.16.0.0/12",    # On-premises network 2
+# ]
+
+# =============================================================================
+# Logging Settings (Optional)
+# =============================================================================
+
+# log_retention_days = 30
+
+# =============================================================================
+# Additional Tags (Optional)
+# =============================================================================
+
+# additional_tags = {
+#   Owner      = "platform-team"
+#   CostCenter = "infrastructure"
+# }
