@@ -174,5 +174,33 @@ variable "deregistration_delay" {
 variable "log_retention_days" {
   description = "CloudWatch Logs retention in days"
   type        = number
-  default     = 30
+  default     = 7
+}
+
+# =============================================================================
+# CloudWatch Logs Insights / Metrics Settings
+# =============================================================================
+
+variable "enable_error_metric_filter" {
+  description = "Enable CloudWatch metric filter for error count"
+  type        = bool
+  default     = true
+}
+
+variable "enable_request_metric_filter" {
+  description = "Enable CloudWatch metric filter for request count"
+  type        = bool
+  default     = false
+}
+
+variable "enable_error_alarm" {
+  description = "Enable CloudWatch alarm for error count"
+  type        = bool
+  default     = false
+}
+
+variable "error_alarm_threshold" {
+  description = "Error count threshold for alarm"
+  type        = number
+  default     = 10
 }

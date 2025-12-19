@@ -1,0 +1,75 @@
+# =============================================================================
+# Required Variables
+# =============================================================================
+
+stack_name = "my-lambda"
+
+# =============================================================================
+# General Settings (Optional)
+# =============================================================================
+
+# aws_region   = "ap-northeast-1"
+# project_name = "lambda-ecr"
+# environment  = "dev"
+
+# =============================================================================
+# ECR Settings (Optional)
+# =============================================================================
+
+# ecr_image_tag_mutability   = "MUTABLE"
+# ecr_scan_on_push           = true
+# ecr_force_delete           = false
+# ecr_lifecycle_policy_count = 10
+
+# =============================================================================
+# Lambda Settings (Optional)
+# =============================================================================
+
+# lambda_memory_size          = 512
+# lambda_timeout              = 30
+# lambda_reserved_concurrency = -1    # -1 = no limit
+# lambda_architecture         = "x86_64"  # or "arm64"
+
+# Container image (leave null to use ECR repository)
+# container_image_uri = null
+# container_image_tag = "latest"
+
+# Set to true after pushing image to ECR
+# create_lambda_function = false
+
+# Environment variables
+# lambda_environment_variables = {
+#   LOG_LEVEL = "INFO"
+#   API_KEY   = "xxx"
+# }
+
+# =============================================================================
+# VPC Settings (Optional)
+# =============================================================================
+
+# enable_vpc             = false
+# vpc_subnet_ids         = ["subnet-xxx", "subnet-yyy"]
+# vpc_security_group_ids = ["sg-xxx"]
+
+# =============================================================================
+# API Gateway Settings (Optional)
+# =============================================================================
+
+# create_api_gateway     = false
+# api_gateway_stage_name = "api"
+
+# =============================================================================
+# CloudWatch Settings (Optional)
+# =============================================================================
+
+# log_retention_days          = 7
+# enable_xray_tracing         = false
+# enable_logs_insights_queries = true
+
+# =============================================================================
+# Additional Tags (Optional)
+# =============================================================================
+
+# tags = {
+#   Owner = "platform-team"
+# }

@@ -136,6 +136,22 @@ output "cloudwatch_log_group_name" {
   value       = aws_cloudwatch_log_group.ecs.name
 }
 
+output "cloudwatch_log_group_arn" {
+  description = "CloudWatch log group ARN"
+  value       = aws_cloudwatch_log_group.ecs.arn
+}
+
+output "logs_insights_queries" {
+  description = "CloudWatch Logs Insights query names"
+  value = [
+    aws_cloudwatch_query_definition.error_logs.name,
+    aws_cloudwatch_query_definition.request_count.name,
+    aws_cloudwatch_query_definition.latency_analysis.name,
+    aws_cloudwatch_query_definition.container_logs.name,
+    aws_cloudwatch_query_definition.task_events.name
+  ]
+}
+
 # =============================================================================
 # Useful Commands
 # =============================================================================
@@ -167,6 +183,55 @@ output "create_service_command" {
 output "view_logs_command" {
   description = "Command to view ECS logs"
   value       = "aws logs tail /ecs/${var.stack_name} --follow"
+}
+
+output "logs_insights_console_url" {
+  description = "CloudWatch Logs Insights console URL"
+  value       = "https://${local.region}.console.aws.amazon.com/cloudwatch/home?region=${local.region}#logsV2:logs-insights$3FqueryDetail$3D~(editorString~'fields*20*40timestamp*2c*20*40message*0a*7c*20sort*20*40timestamp*20desc*0a*7c*20limit*20200~source~(~'${replace(aws_cloudwatch_log_group.ecs.name, "/", "*2f")}))"
+}
+
+output "logs_insights_sample_queries" {
+  description = "Sample CloudWatch Logs Insights queries"
+  value       = <<-EOF
+
+    =============================================================================
+    CloudWatch Logs Insights Sample Queries
+    =============================================================================
+
+    1. View all logs (latest):
+    -------------------------
+    fields @timestamp, @message, @logStream
+    | sort @timestamp desc
+    | limit 200
+
+    2. Search for errors:
+    ---------------------
+    fields @timestamp, @message, @logStream
+    | filter @message like /(?i)(error|exception|fail)/
+    | sort @timestamp desc
+    | limit 100
+
+    3. Request count by status:
+    ---------------------------
+    fields @timestamp, @message
+    | parse @message /"status":(?<status>\d+)/
+    | stats count(*) as request_count by status
+    | sort request_count desc
+
+    4. Latency analysis:
+    --------------------
+    fields @timestamp, @message
+    | parse @message /"duration":(?<duration>[\d.]+)/
+    | stats avg(duration) as avg_latency, max(duration) as max_latency by bin(5m)
+
+    5. Container lifecycle events:
+    ------------------------------
+    fields @timestamp, @message, @logStream
+    | filter @message like /(?i)(start|stop|health|ready)/
+    | sort @timestamp desc
+
+    =============================================================================
+  EOF
 }
 
 output "deployment_summary" {
