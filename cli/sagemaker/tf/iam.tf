@@ -26,44 +26,30 @@ resource "aws_iam_role" "sagemaker_execution" {
   })
 }
 
-# Attach AmazonSageMakerFullAccess policy
-resource "aws_iam_role_policy_attachment" "sagemaker_full_access" {
-  count = var.create_iam_role ? 1 : 0
-
-  role       = aws_iam_role.sagemaker_execution[0].name
-  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonSageMakerFullAccess"
+# Managed policies for SageMaker execution role
+locals {
+  sagemaker_managed_policies = [
+    "arn:${local.partition}:iam::aws:policy/AmazonSageMakerFullAccess",
+    "arn:${local.partition}:iam::aws:policy/AmazonS3FullAccess",
+    "arn:${local.partition}:iam::aws:policy/CloudWatchLogsFullAccess",
+    "arn:${local.partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+  ]
 }
 
-# Attach AmazonS3FullAccess policy
-resource "aws_iam_role_policy_attachment" "s3_full_access" {
-  count = var.create_iam_role ? 1 : 0
+# Attach managed policies to SageMaker execution role
+resource "aws_iam_role_policy_attachment" "sagemaker_policies" {
+  for_each = var.create_iam_role ? toset(local.sagemaker_managed_policies) : toset([])
 
   role       = aws_iam_role.sagemaker_execution[0].name
-  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonS3FullAccess"
-}
-
-# Attach CloudWatchLogsFullAccess policy
-resource "aws_iam_role_policy_attachment" "cloudwatch_logs" {
-  count = var.create_iam_role ? 1 : 0
-
-  role       = aws_iam_role.sagemaker_execution[0].name
-  policy_arn = "arn:${local.partition}:iam::aws:policy/CloudWatchLogsFullAccess"
-}
-
-# Attach ECR read-only access for pulling container images
-resource "aws_iam_role_policy_attachment" "ecr_read_only" {
-  count = var.create_iam_role ? 1 : 0
-
-  role       = aws_iam_role.sagemaker_execution[0].name
-  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  policy_arn = each.value
 }
 
 # Attach additional policies if specified
 resource "aws_iam_role_policy_attachment" "additional" {
-  count = var.create_iam_role ? length(var.additional_iam_policies) : 0
+  for_each = var.create_iam_role ? toset(var.additional_iam_policies) : toset([])
 
   role       = aws_iam_role.sagemaker_execution[0].name
-  policy_arn = var.additional_iam_policies[count.index]
+  policy_arn = each.value
 }
 
 # Custom policy for S3 bucket access (more restrictive alternative)
