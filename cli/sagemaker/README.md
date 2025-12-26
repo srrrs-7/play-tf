@@ -58,6 +58,262 @@ sagemaker/
     └── terraform.tfvars.example  # 設定例
 ```
 
+## S3 バケットとデータ構造
+
+SageMaker では 3 つの S3 バケットを使用してデータとモデルを管理します。
+
+### バケット構成
+
+| バケット | 命名規則 | 用途 |
+|---------|---------|------|
+| Input | `{stack-name}-input-{account-id}` | 学習・検証・テスト用データ |
+| Output | `{stack-name}-output-{account-id}` | ジョブの出力結果 |
+| Model | `{stack-name}-models-{account-id}` | 学習済みモデル・成果物 |
+
+### Input バケット（入力データ）
+
+機械学習モデルの学習に使用するデータを格納します。
+
+```
+s3://{stack-name}-input-{account-id}/
+├── training/           # 学習データ（必須）
+│   ├── data.csv
+│   ├── train.parquet
+│   └── images/
+│       ├── class_a/
+│       │   ├── img001.jpg
+│       │   └── img002.jpg
+│       └── class_b/
+│           ├── img001.jpg
+│           └── img002.jpg
+├── validation/         # 検証データ（オプション）
+│   └── validation.csv
+└── test/               # テストデータ（オプション）
+    └── test.csv
+```
+
+#### サポートされるデータフォーマット
+
+| カテゴリ | フォーマット | 説明 |
+|---------|------------|------|
+| **表形式** | CSV | カンマ区切り、ヘッダー有無どちらも可 |
+| | Parquet | 列指向フォーマット、大規模データに最適 |
+| | JSON Lines | 1行1レコードの JSON |
+| **画像** | JPEG, PNG | フォルダ名をラベルとして使用可能 |
+| | RecordIO | AWS 独自形式、高速読み込み |
+| **テキスト** | TXT, JSON | 自然言語処理用 |
+| **その他** | LibSVM | スパースデータ用 |
+| | Protobuf | 構造化データ |
+
+#### データアップロード例
+
+```bash
+# CSV ファイルをアップロード
+aws s3 cp train.csv s3://my-project-input-123456789012/training/
+
+# ディレクトリごとアップロード
+aws s3 sync ./dataset/ s3://my-project-input-123456789012/training/
+
+# 画像データセット（ImageNet 形式）
+aws s3 sync ./images/ s3://my-project-input-123456789012/training/images/
+
+# 圧縮ファイル
+aws s3 cp data.tar.gz s3://my-project-input-123456789012/training/
+```
+
+### Output バケット（出力データ）
+
+トレーニングジョブや処理ジョブの出力を格納します。
+
+```
+s3://{stack-name}-output-{account-id}/
+├── output/                          # トレーニングジョブ出力
+│   └── {training-job-name}/
+│       └── output/
+│           └── model.tar.gz         # 学習済みモデル
+├── processing/                      # 処理ジョブ出力
+│   └── {processing-job-name}/
+│       └── output/
+│           ├── processed_train.csv  # 前処理済みデータ
+│           └── processed_test.csv
+└── logs/                            # ログファイル（オプション）
+```
+
+#### 出力の取得
+
+```bash
+# トレーニング結果をダウンロード
+aws s3 cp s3://my-project-output-123456789012/output/my-job/output/model.tar.gz ./
+
+# 処理結果をダウンロード
+aws s3 sync s3://my-project-output-123456789012/processing/my-processing-job/ ./output/
+```
+
+### Model バケット（モデル成果物）
+
+デプロイ用のモデルファイルやチェックポイントを格納します。
+
+```
+s3://{stack-name}-models-{account-id}/
+├── models/                    # デプロイ用モデル
+│   ├── model-v1.tar.gz
+│   └── model-v2.tar.gz
+├── artifacts/                 # その他の成果物
+│   ├── checkpoints/           # チェックポイント
+│   │   ├── epoch_10.pt
+│   │   └── epoch_20.pt
+│   ├── preprocessors/         # 前処理器
+│   │   └── tokenizer.json
+│   └── configs/               # 設定ファイル
+│       └── hyperparameters.json
+└── mlflow/                    # MLflow アーティファクト（オプション）
+```
+
+### model.tar.gz の構造
+
+SageMaker でモデルをデプロイするには、`model.tar.gz` 形式でパッケージングする必要があります。
+
+#### PyTorch の場合
+
+```
+model.tar.gz
+├── model.pth                  # モデルの重み（必須）
+├── config.json                # モデル設定（オプション）
+└── code/                      # カスタム推論コード（オプション）
+    ├── inference.py           # 推論ハンドラー
+    └── requirements.txt       # 依存ライブラリ
+```
+
+```python
+# inference.py の例
+import torch
+import json
+
+def model_fn(model_dir):
+    """モデルをロード"""
+    model = torch.load(f"{model_dir}/model.pth")
+    return model
+
+def input_fn(request_body, request_content_type):
+    """入力を前処理"""
+    if request_content_type == 'application/json':
+        return json.loads(request_body)
+    raise ValueError(f"Unsupported content type: {request_content_type}")
+
+def predict_fn(input_data, model):
+    """推論を実行"""
+    with torch.no_grad():
+        return model(torch.tensor(input_data))
+
+def output_fn(prediction, response_content_type):
+    """出力を後処理"""
+    return json.dumps(prediction.tolist())
+```
+
+#### TensorFlow/Keras の場合
+
+```
+model.tar.gz
+├── 1/                         # SavedModel 形式
+│   ├── saved_model.pb
+│   └── variables/
+│       ├── variables.data-00000-of-00001
+│       └── variables.index
+└── code/                      # カスタムコード（オプション）
+    └── inference.py
+```
+
+#### Scikit-learn の場合
+
+```
+model.tar.gz
+├── model.joblib               # または model.pkl
+└── code/
+    └── inference.py
+```
+
+#### モデルのパッケージング
+
+```bash
+# PyTorch モデルをパッケージング
+cd model_directory
+tar -czvf model.tar.gz model.pth config.json code/
+
+# S3 にアップロード
+aws s3 cp model.tar.gz s3://my-project-models-123456789012/models/
+
+# TensorFlow SavedModel をパッケージング
+tar -czvf model.tar.gz 1/
+
+# モデルの内容を確認
+tar -tzvf model.tar.gz
+```
+
+### データフォーマット別の設定例
+
+#### CSV データ（表形式）
+
+```bash
+# training.csv
+feature1,feature2,feature3,label
+1.0,2.0,3.0,0
+4.0,5.0,6.0,1
+...
+```
+
+トレーニングジョブでの指定:
+```bash
+./script.sh training-create my-job \
+  683313688378.dkr.ecr.ap-northeast-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3 \
+  s3://my-bucket/training \
+  s3://my-bucket/output
+```
+
+#### 画像データ（分類）
+
+フォルダ構造でラベルを指定:
+```
+training/
+├── cat/
+│   ├── cat001.jpg
+│   └── cat002.jpg
+└── dog/
+    ├── dog001.jpg
+    └── dog002.jpg
+```
+
+#### JSON Lines（テキスト/NLP）
+
+```json
+{"text": "This is a positive review", "label": 1}
+{"text": "This is a negative review", "label": 0}
+```
+
+### ベストプラクティス
+
+1. **データの分割**
+   - 学習:検証:テスト = 70:15:15 または 80:10:10
+   - 別々のプレフィックス（フォルダ）に格納
+
+2. **大規模データの最適化**
+   - Parquet 形式を使用（列指向で高速）
+   - ファイルを適切なサイズに分割（128MB〜512MB）
+   - S3 の複数リージョンレプリケーションを活用
+
+3. **バージョン管理**
+   - S3 バージョニングを有効化（Terraform でデフォルト有効）
+   - データセットにタイムスタンプやバージョン番号を付与
+
+4. **セキュリティ**
+   - S3 暗号化を有効化（AES256、デフォルト有効）
+   - パブリックアクセスをブロック（デフォルト有効）
+   - IAM ロールで最小権限を設定
+
+5. **コスト最適化**
+   - ライフサイクルルールで古いデータを削除/アーカイブ
+   - S3 Intelligent-Tiering の利用を検討
+   - 不要な中間ファイルは削除
+
 ## クイックスタート
 
 ### 1. Terraform でインフラをデプロイ
