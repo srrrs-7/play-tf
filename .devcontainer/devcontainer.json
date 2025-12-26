@@ -30,7 +30,10 @@
         "hashicorp.terraform",
         "hashicorp.terraform-docs",
         // aws
-        "amazonwebservices.aws-toolkit-vscode"
+        "amazonwebservices.aws-toolkit-vscode",
+        // markdown
+        "shd101wyy.markdown-preview-enhanced",
+        "bierner.markdown-mermaid"
       ],
       "settings": {
         "editor.formatOnSave": true
