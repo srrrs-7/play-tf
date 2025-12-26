@@ -3,6 +3,8 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - amazonwebservices
+  - bierner
   - distroless
   - esac
   - ldflags
