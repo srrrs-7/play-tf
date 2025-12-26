@@ -1,0 +1,146 @@
+Product FAQ - CloudSync Pro
+===========================
+
+General Questions
+-----------------
+
+Q: What is CloudSync Pro?
+A: CloudSync Pro is an enterprise-grade file synchronization and collaboration platform that enables teams to share, sync, and collaborate on files across devices and locations.
+
+Q: What platforms does CloudSync Pro support?
+A: CloudSync Pro is available on:
+- Windows 10/11
+- macOS 12+
+- Linux (Ubuntu 20.04+, Fedora 35+)
+- iOS 15+
+- Android 12+
+- Web browsers (Chrome, Firefox, Safari, Edge)
+
+Q: How much storage do I get?
+A: Storage varies by plan:
+- Free: 5 GB
+- Personal: 100 GB ($9.99/month)
+- Team: 1 TB per user ($19.99/user/month)
+- Enterprise: Unlimited (custom pricing)
+
+Billing and Subscription
+------------------------
+
+Q: What is your refund policy?
+A: We offer a full refund within 30 days of purchase for annual plans. Monthly plans can be cancelled anytime with no refund for the current billing period. Enterprise customers should refer to their contract terms.
+
+Q: How do I cancel my subscription?
+A: To cancel your subscription:
+1. Go to Settings > Account > Subscription
+2. Click "Cancel Subscription"
+3. Confirm your cancellation
+Your access continues until the end of the current billing period.
+
+Q: Do you offer discounts for non-profits?
+A: Yes, we offer 50% discount for registered non-profit organizations. Contact sales@cloudsync.example.com with your non-profit documentation.
+
+Q: Can I switch between plans?
+A: Yes, you can upgrade or downgrade at any time. Upgrades take effect immediately with prorated billing. Downgrades take effect at the next billing cycle.
+
+Security and Privacy
+--------------------
+
+Q: Is my data secure?
+A: Yes, we take security seriously:
+- AES-256 encryption for data at rest
+- TLS 1.3 for data in transit
+- SOC 2 Type II certified
+- GDPR compliant
+- Optional client-side encryption (zero-knowledge)
+
+Q: Where is my data stored?
+A: Data is stored in AWS data centers. You can choose your preferred region:
+- US East (Virginia)
+- US West (Oregon)
+- EU (Frankfurt)
+- Asia Pacific (Tokyo, Sydney)
+
+Q: Can I export my data?
+A: Yes, you can export all your data at any time:
+1. Go to Settings > Account > Data Export
+2. Select export format (ZIP or individual files)
+3. Download your complete data archive
+
+Features and Usage
+------------------
+
+Q: What is the maximum file size?
+A: Maximum file sizes by plan:
+- Free: 2 GB per file
+- Personal: 10 GB per file
+- Team: 50 GB per file
+- Enterprise: Unlimited
+
+Q: How many devices can I sync?
+A: Device limits by plan:
+- Free: 3 devices
+- Personal: 10 devices
+- Team: Unlimited
+- Enterprise: Unlimited
+
+Q: Does CloudSync Pro work offline?
+A: Yes, you can mark files and folders for offline access. Changes sync automatically when you're back online.
+
+Q: What integrations are available?
+A: We integrate with:
+- Microsoft 365 (Word, Excel, PowerPoint)
+- Google Workspace
+- Slack
+- Microsoft Teams
+- Zoom
+- Salesforce
+- HubSpot
+- Jira
+- Asana
+- 100+ more via Zapier
+
+Support
+-------
+
+Q: How do I contact support?
+A: Support options by plan:
+- Free: Community forums and knowledge base
+- Personal: Email support (response within 48 hours)
+- Team: Email and chat support (response within 24 hours)
+- Enterprise: Priority support with dedicated account manager
+
+Q: What are your support hours?
+A: - Email: 24/7
+- Chat: Monday-Friday, 9 AM - 9 PM ET
+- Phone (Enterprise): 24/7
+
+Q: Is there a status page?
+A: Yes, check https://status.cloudsync.example.com for real-time service status and scheduled maintenance.
+
+Troubleshooting
+---------------
+
+Q: Why won't my files sync?
+A: Common solutions:
+1. Check your internet connection
+2. Ensure you have available storage
+3. Verify the file isn't open in another application
+4. Check if the file name contains unsupported characters
+5. Restart the CloudSync Pro application
+
+Q: How do I recover a deleted file?
+A: Deleted files are kept in Trash for 30 days:
+1. Go to Trash in the web or desktop app
+2. Find the file you want to restore
+3. Click "Restore"
+For files deleted more than 30 days ago, contact support.
+
+Q: The app is running slowly. What can I do?
+A: Try these steps:
+1. Clear the app cache (Settings > Advanced > Clear Cache)
+2. Reduce the number of files being synced
+3. Pause sync during large uploads
+4. Update to the latest version
+5. Restart the application
+
+Contact us at support@cloudsync.example.com for additional help.
