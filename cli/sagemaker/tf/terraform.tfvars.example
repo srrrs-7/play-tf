@@ -1,0 +1,154 @@
+# =============================================================================
+# SageMaker Infrastructure Configuration
+# =============================================================================
+# Copy this file to terraform.tfvars and modify as needed:
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================================
+
+# =============================================================================
+# General Settings
+# =============================================================================
+
+# AWS region
+aws_region = "ap-northeast-1"
+
+# Project name for resource naming
+project_name = "sagemaker"
+
+# Environment name (dev, stg, prd)
+environment = "dev"
+
+# Stack name (required) - used for resource identification
+stack_name = "my-ml-project"
+
+# Additional tags for resources
+tags = {
+  Owner   = "data-science-team"
+  UseCase = "ml-training"
+}
+
+# =============================================================================
+# S3 Settings
+# =============================================================================
+
+# Whether to create S3 buckets for data and models
+create_s3_buckets = true
+
+# Enable versioning on S3 buckets
+s3_versioning_enabled = true
+
+# Allow destroying S3 buckets even if they contain objects (use with caution)
+s3_force_destroy = false
+
+# Number of days after which objects expire (0 to disable)
+s3_lifecycle_expiration_days = 0
+
+# =============================================================================
+# IAM Settings
+# =============================================================================
+
+# Whether to create IAM role for SageMaker
+create_iam_role = true
+
+# Name for the SageMaker execution role
+iam_role_name = "sagemaker-execution-role"
+
+# ARN of existing IAM role to use (if create_iam_role is false)
+# existing_role_arn = "arn:aws:iam::123456789012:role/existing-sagemaker-role"
+
+# Additional IAM policy ARNs to attach to the SageMaker role
+additional_iam_policies = []
+
+# =============================================================================
+# SageMaker Notebook Settings
+# =============================================================================
+
+# Whether to create a SageMaker notebook instance
+create_notebook = false
+
+# Notebook instance type
+notebook_instance_type = "ml.t3.medium"
+
+# Notebook EBS volume size in GB
+notebook_volume_size = 20
+
+# Notebook platform identifier
+notebook_platform_identifier = "notebook-al2-v2"
+
+# Direct internet access for notebook
+notebook_direct_internet_access = "Enabled"
+
+# =============================================================================
+# SageMaker Experiment Settings
+# =============================================================================
+
+# Whether to create a SageMaker experiment
+create_experiment = true
+
+# Description for the SageMaker experiment
+# experiment_description = "My ML experiment"
+
+# =============================================================================
+# SageMaker Domain Settings (for Studio)
+# =============================================================================
+
+# Whether to create a SageMaker Studio domain
+create_domain = false
+
+# Authentication mode for SageMaker domain
+domain_auth_mode = "IAM"
+
+# VPC ID for SageMaker domain (required if create_domain is true)
+# vpc_id = "vpc-xxxxxxxx"
+
+# Subnet IDs for SageMaker domain (required if create_domain is true)
+# subnet_ids = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
+
+# =============================================================================
+# CloudWatch Settings
+# =============================================================================
+
+# CloudWatch Logs retention in days
+log_retention_days = 30
+
+# Enable CloudWatch metrics and dashboard for SageMaker
+enable_cloudwatch_metrics = true
+
+# =============================================================================
+# Training Job Default Settings
+# =============================================================================
+
+# Default instance type for training jobs
+default_training_instance_type = "ml.m5.large"
+
+# Default instance count for training jobs
+default_training_instance_count = 1
+
+# Default volume size in GB for training jobs
+default_training_volume_size = 50
+
+# Default max runtime in seconds for training jobs (24 hours)
+default_max_runtime_seconds = 86400
+
+# =============================================================================
+# Processing Job Default Settings
+# =============================================================================
+
+# Default instance type for processing jobs
+default_processing_instance_type = "ml.m5.large"
+
+# Default instance count for processing jobs
+default_processing_instance_count = 1
+
+# Default volume size in GB for processing jobs
+default_processing_volume_size = 50
+
+# =============================================================================
+# Model Registry Settings
+# =============================================================================
+
+# Whether to create a model package group for model registry
+create_model_package_group = false
+
+# Description for the model package group
+# model_package_group_description = "Model package group for my project"
