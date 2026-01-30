@@ -10,6 +10,7 @@ words:
   - ldflags
   - nonroot
   - pipefail
+  - tfvars
   - trixie
 ignoreWords: []
 import: []
