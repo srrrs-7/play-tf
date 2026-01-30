@@ -1,0 +1,71 @@
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+{{#if dynamodb}}
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+{{/if}}
+{{#if s3}}
+import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+{{/if}}
+{{#if sqs}}
+import { SQSClient, SendMessageCommand, ReceiveMessageCommand } from '@aws-sdk/client-sqs';
+{{/if}}
+
+{{#if dynamodb}}
+// DynamoDB client initialization
+const dynamoClient = new DynamoDBClient({});
+const dynamodb = DynamoDBDocumentClient.from(dynamoClient);
+const tableName = process.env.TABLE_NAME!;
+{{/if}}
+
+{{#if s3}}
+// S3 client initialization
+const s3Client = new S3Client({});
+const bucketName = process.env.BUCKET_NAME!;
+{{/if}}
+
+{{#if sqs}}
+// SQS client initialization
+const sqsClient = new SQSClient({});
+const queueUrl = process.env.QUEUE_URL!;
+{{/if}}
+
+interface Response {
+  message?: string;
+  error?: string;
+  data?: unknown;
+}
+
+const createResponse = (statusCode: number, body: Response): APIGatewayProxyResult => ({
+  statusCode,
+  headers: {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+  },
+  body: JSON.stringify(body),
+});
+
+export const handler = async (
+  event: APIGatewayProxyEvent,
+  context: Context
+): Promise<APIGatewayProxyResult> => {
+  console.log('Event:', JSON.stringify(event, null, 2));
+
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return createResponse(200, { message: 'OK' });
+  }
+
+  try {
+    // TODO: Implement your logic here
+    return createResponse(200, {
+      message: 'Success',
+      data: { requestId: context.awsRequestId }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    return createResponse(500, { error: 'Internal server error' });
+  }
+};
