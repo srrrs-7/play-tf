@@ -12,10 +12,8 @@ import {
   isTokenExpiringSoon,
   parseCookies,
   getClearCookies,
-  getStateCookie,
   createRedirectResponse,
-  generateState,
-  getLoginUrl,
+  createLoginRedirect,
   getLogoutUrl,
 } from './shared';
 
@@ -44,8 +42,7 @@ export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFront
   // No token - redirect to login
   if (!idToken) {
     console.log('No id_token found, redirecting to login');
-    const state = generateState(uri);
-    return createRedirectResponse(getLoginUrl(state), [getStateCookie(state)]);
+    return createLoginRedirect(uri);
   }
 
   // Verify token
@@ -58,8 +55,7 @@ export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFront
 
   if (!result.valid) {
     console.log(`Token validation failed: ${result.error}`);
-    const state = generateState(uri);
-    return createRedirectResponse(getLoginUrl(state), [...getClearCookies(), getStateCookie(state)]);
+    return createLoginRedirect(uri, true);
   }
 
   // Check if token is expiring soon
@@ -71,8 +67,7 @@ export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFront
       return createRedirectResponse(`/auth/refresh?redirect_uri=${encodedUri}`);
     }
     // No refresh token, redirect to login
-    const state = generateState(uri);
-    return createRedirectResponse(getLoginUrl(state), [getStateCookie(state)]);
+    return createLoginRedirect(uri);
   }
 
   console.log('Token valid, proceeding to origin');

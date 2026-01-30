@@ -79,3 +79,10 @@ export function getLogoutUrl(): string {
   });
   return `https://${CONFIG.COGNITO_DOMAIN}/logout?${params.toString()}`;
 }
+
+/**
+ * Get full CloudFront URL for a path
+ */
+export function getFullUrl(path: string): string {
+  return `https://${CONFIG.CLOUDFRONT_DOMAIN}${path}`;
+}

@@ -4,8 +4,9 @@ set -e
 
 # Load common functions
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/../lib/common.sh"
-source "$SCRIPT_DIR/../lib/cloudfront-helpers.sh"
+CLI_LIB_DIR="$SCRIPT_DIR/../../../cli/lib"
+source "$CLI_LIB_DIR/common.sh"
+source "$CLI_LIB_DIR/cloudfront-helpers.sh"
 
 # CloudFront + Cognito + Lambda@Edge + S3 Architecture Script
 # Provides Cognito-based authentication for S3 content via CloudFront

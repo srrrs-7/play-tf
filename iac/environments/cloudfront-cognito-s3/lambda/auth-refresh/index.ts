@@ -5,18 +5,16 @@
 
 import { CloudFrontRequestEvent, CloudFrontRequestResult } from 'aws-lambda';
 import {
-  CONFIG,
   COOKIE_NAMES,
   getClientSecret,
   parseCookies,
   generateTokenCookies,
-  getClearCookies,
-  getStateCookie,
   parseQueryString,
   createRedirectResponse,
-  generateState,
-  getLoginUrl,
+  createLoginRedirect,
+  getFullUrl,
   refreshTokens,
+  CONFIG,
 } from './shared';
 
 export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFrontRequestResult> => {
@@ -35,8 +33,7 @@ export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFront
 
   if (!refreshToken) {
     console.log('No refresh token found, redirecting to login');
-    const state = generateState(redirectUri);
-    return createRedirectResponse(getLoginUrl(state), [...getClearCookies(), getStateCookie(state)]);
+    return createLoginRedirect(redirectUri, true);
   }
 
   try {
@@ -59,11 +56,10 @@ export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFront
 
     // Redirect to original URI
     console.log(`Redirecting to: ${redirectUri}`);
-    return createRedirectResponse(`https://${CONFIG.CLOUDFRONT_DOMAIN}${redirectUri}`, tokenCookies);
+    return createRedirectResponse(getFullUrl(redirectUri), tokenCookies);
   } catch (err) {
     console.error(`Token refresh failed: ${err}`);
     // Refresh failed, redirect to login
-    const state = generateState(redirectUri);
-    return createRedirectResponse(getLoginUrl(state), [...getClearCookies(), getStateCookie(state)]);
+    return createLoginRedirect(redirectUri, true);
   }
 };

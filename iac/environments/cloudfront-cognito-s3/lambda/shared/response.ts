@@ -3,6 +3,8 @@
  */
 
 import { CloudFrontRequestResult } from 'aws-lambda';
+import { generateState, getLoginUrl } from './cognito';
+import { getClearCookies, getStateCookie } from './cookies';
 
 /**
  * Create redirect response
@@ -51,4 +53,19 @@ export function createErrorResponse(message: string): CloudFrontRequestResult {
 </body>
 </html>`,
   };
+}
+
+/**
+ * Create redirect to Cognito login with state
+ * Optionally clears existing auth cookies
+ */
+export function createLoginRedirect(
+  originalUri: string,
+  clearExistingCookies: boolean = false
+): CloudFrontRequestResult {
+  const state = generateState(originalUri);
+  const cookies = clearExistingCookies
+    ? [...getClearCookies(), getStateCookie(state)]
+    : [getStateCookie(state)];
+  return createRedirectResponse(getLoginUrl(state), cookies);
 }

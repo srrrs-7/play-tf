@@ -1,179 +1,318 @@
-# CLAUDE.md - CloudFront + Cognito + S3 Environment
+# CLAUDE.md - CloudFront + Cognito + Lambda@Edge + S3
 
-This environment provides a CloudFront distribution with Cognito authentication for protected S3 content delivery.
+Claude Code がこのディレクトリで作業する際のガイドラインです。
 
-## Overview
+## 概要
 
-This environment deploys a secure content delivery architecture using CloudFront with Lambda@Edge functions that enforce Cognito authentication. Users must authenticate via Cognito Hosted UI before accessing protected S3 content.
+このディレクトリは Cognito 認証付き CloudFront + S3 アーキテクチャの Terraform 設定、CLI スクリプト、Lambda@Edge 関数を含みます。
 
-## Architecture
+## ディレクトリ構造
 
 ```
-Browser
-  |
-  | (1) GET /content.jpg
-  v
-CloudFront Distribution
-  |
-  | (2) Lambda@Edge checks JWT cookie
-  |     - Valid: proceed to S3
-  |     - Invalid: redirect to Cognito login
-  v
-Cognito Hosted UI (if unauthenticated)
-  |
-  | (3) User authenticates
-  v
-Lambda@Edge: auth-callback
-  |
-  | (4) Exchange code for tokens, set cookies
-  v
-S3 Bucket (private, OAC)
-  |
-  v
-Protected Content
+iac/environments/cloudfront-cognito-s3/
+├── main.tf                    # Terraform リソース定義
+├── variables.tf               # 変数定義
+├── outputs.tf                 # 出力定義
+├── terraform.tfvars.example   # 設定例
+├── script.sh                  # CLI スクリプト（deploy/destroy/status 等）
+├── build-lambdas.sh           # Lambda ビルド（Terraform 用、設定値注入対応）
+├── README.md                  # ユーザードキュメント
+├── CLAUDE.md                  # このファイル
+└── lambda/                    # Lambda@Edge TypeScript ソース
+    ├── build.sh               # 統一ビルドスクリプト
+    ├── shared/                # 共通モジュール
+    └── auth-{check,callback,refresh}/  # 各 Lambda 関数
 ```
 
-## Modules Used
+## デプロイ方法
 
-- `s3` - S3 bucket for content storage (private access via OAC)
-- `cognito` - Cognito User Pool with Hosted UI for authentication
-
-## Resources Deployed
-
-| Resource | Name Pattern | Purpose |
-|----------|--------------|---------|
-| S3 Bucket | `{project_name}-{env}-content` | Protected content storage |
-| Cognito User Pool | `{project_name}-{env}-users` | User authentication |
-| Cognito User Pool Client | `{project_name}-{env}-client` | OAuth client |
-| CloudFront Distribution | - | Content delivery with auth |
-| Lambda@Edge | `{project_name}-{env}-auth-check` | JWT validation |
-| Lambda@Edge | `{project_name}-{env}-auth-callback` | OAuth callback handler |
-| Lambda@Edge | `{project_name}-{env}-auth-refresh` | Token refresh |
-| CloudFront OAC | `{project_name}-{env}-oac` | S3 access control |
-| CloudWatch Log Groups | `/aws/lambda/us-east-1.*` | Lambda@Edge logs |
-
-## Variables
-
-### Core Variables
-
-| Variable | Type | Description | Default |
-|----------|------|-------------|---------|
-| `project_name` | string | Project name | (required) |
-| `environment` | string | Environment name | `dev` |
-| `aws_region` | string | AWS region | `ap-northeast-1` |
-
-### S3 Variables
-
-| Variable | Type | Description | Default |
-|----------|------|-------------|---------|
-| `enable_s3_versioning` | bool | Enable versioning | `true` |
-| `s3_lifecycle_rules` | list(object) | Lifecycle rules | `[]` |
-
-### Cognito Variables
-
-| Variable | Type | Description | Default |
-|----------|------|-------------|---------|
-| `cognito_domain_prefix` | string | Hosted UI domain prefix | (required) |
-| `mfa_configuration` | string | MFA setting (OFF/ON/OPTIONAL) | `OFF` |
-| `password_policy` | object | Password requirements | (see variables.tf) |
-| `cognito_callback_urls` | list(string) | OAuth callback URLs | `["https://localhost/auth/callback"]` |
-| `cognito_logout_urls` | list(string) | Logout URLs | `["https://localhost/"]` |
-| `access_token_validity_hours` | number | Access token TTL (hours) | `1` |
-| `id_token_validity_hours` | number | ID token TTL (hours) | `1` |
-| `refresh_token_validity_days` | number | Refresh token TTL (days) | `30` |
-
-### CloudFront Variables
-
-| Variable | Type | Description | Default |
-|----------|------|-------------|---------|
-| `default_root_object` | string | Default index file | `index.html` |
-| `cloudfront_price_class` | string | Price class | `PriceClass_200` |
-| `geo_restriction_type` | string | Geo restriction | `none` |
-| `geo_restriction_locations` | list(string) | Country codes | `[]` |
-| `acm_certificate_arn` | string | Custom domain cert | `null` |
-| `domain_aliases` | list(string) | Custom domain names | `[]` |
-
-### Logging Variables
-
-| Variable | Type | Description | Default |
-|----------|------|-------------|---------|
-| `log_retention_days` | number | Log retention days | `30` |
-
-## Lambda Functions
-
-Located in `lambda/` directory:
-
-- `auth-check/` - Validates JWT tokens from cookies on viewer-request
-- `auth-callback/` - Handles OAuth callback, exchanges code for tokens
-- `auth-refresh/` - Refreshes expired tokens using refresh token
-
-Build all functions with:
-```bash
-./build-lambdas.sh
-```
-
-## Deployment
+### CLI スクリプト（推奨）
 
 ```bash
-# 1. Configure variables
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars (set project_name, cognito_domain_prefix)
+./script.sh deploy my-auth-app
+./script.sh destroy my-auth-app
+./script.sh status
+```
 
-# 2. Build Lambda functions
-chmod +x build-lambdas.sh
+### Terraform
+
+```bash
 ./build-lambdas.sh
-
-# 3. Initial deploy
 terraform init
 terraform plan
 terraform apply
-
-# 4. Update Cognito callback URLs with CloudFront domain
-CLOUDFRONT_DOMAIN=$(terraform output -raw cloudfront_domain_name)
-# Update terraform.tfvars:
-# cognito_callback_urls = ["https://${CLOUDFRONT_DOMAIN}/auth/callback"]
-# cognito_logout_urls   = ["https://${CLOUDFRONT_DOMAIN}/"]
-terraform apply
-
-# 5. Rebuild Lambdas with configuration values
-REGION=$(terraform output -json lambda_config_values | jq -r '.COGNITO_REGION')
-POOL_ID=$(terraform output -json lambda_config_values | jq -r '.COGNITO_USER_POOL_ID')
-CLIENT_ID=$(terraform output -json lambda_config_values | jq -r '.COGNITO_CLIENT_ID')
-CLIENT_SECRET=$(terraform output -raw cognito_client_secret)
-COGNITO_DOMAIN=$(terraform output -json lambda_config_values | jq -r '.COGNITO_DOMAIN')
-CF_DOMAIN=$(terraform output -json lambda_config_values | jq -r '.CLOUDFRONT_DOMAIN')
-
-./build-lambdas.sh "$REGION" "$POOL_ID" "$CLIENT_ID" "$CLIENT_SECRET" "$COGNITO_DOMAIN" "$CF_DOMAIN"
-terraform apply
+# 設定値取得後に Lambda 再ビルド（README.md 参照）
 ```
 
-## Testing
+## コード規約
+
+### CLI スクリプト (script.sh)
+
+- `cli/lib/common.sh` と `cli/lib/cloudfront-helpers.sh` を source
+- パス: `$SCRIPT_DIR/../../../cli/lib/`
+- 関数名はスネークケース（`cognito_create`, `edge_deploy`）
+- ログ出力は `log_info`, `log_error`, `log_success`, `log_step` を使用
+- 破壊的操作は `confirm_action` で確認
+
+### Terraform (main.tf, variables.tf, outputs.tf)
+
+- 日本語コメントで説明
+- 命名規則: `{project_name}-{environment}-{purpose}`
+- デフォルトタグ: Environment, Project, ManagedBy
+- モジュール参照: `../../modules/{module-name}`
+
+### Lambda@Edge TypeScript
+
+#### インポート規則
+
+```typescript
+// AWS Lambda 型は aws-lambda から
+import { CloudFrontRequestEvent, CloudFrontRequestResult } from 'aws-lambda';
+
+// 共通モジュールは ./shared から
+import { CONFIG, COOKIE_NAMES, parseCookies, ... } from './shared';
+```
+
+#### 共通モジュール (lambda/shared/)
+
+| モジュール | 責務 |
+|------------|------|
+| `constants.ts` | Cookie 名、有効期限などの定数 |
+| `config.ts` | 設定値（ビルド時にプレースホルダー置換） |
+| `types.ts` | 共通型定義 |
+| `http.ts` | HTTPS リクエストユーティリティ |
+| `jwt.ts` | JWT 検証（JWKS 取得、署名検証） |
+| `cookies.ts` | Cookie パース/生成 |
+| `cognito.ts` | Cognito URL 生成、State 処理、`getFullUrl()` |
+| `token.ts` | トークン交換/リフレッシュ |
+| `query.ts` | クエリ文字列パース |
+| `response.ts` | CloudFront レスポンス生成、`createLoginRedirect()` |
+
+#### 主要なヘルパー関数
+
+| 関数 | モジュール | 用途 |
+|------|-----------|------|
+| `createLoginRedirect(uri, clearCookies?)` | response.ts | Cognito ログインへのリダイレクト生成 |
+| `createRedirectResponse(location, cookies?)` | response.ts | 302 リダイレクトレスポンス生成 |
+| `createErrorResponse(message)` | response.ts | 400 エラーレスポンス生成 |
+| `getFullUrl(path)` | cognito.ts | CloudFront 完全 URL 生成 |
+| `generateState(uri)` | cognito.ts | CSRF 対策用 State パラメータ生成 |
+| `decodeState(state, storedState)` | cognito.ts | State パラメータの検証とデコード |
+| `getLoginUrl(state)` | cognito.ts | Cognito 認可 URL 生成 |
+| `getLogoutUrl()` | cognito.ts | Cognito ログアウト URL 生成 |
+| `verifyToken(token, ...)` | jwt.ts | JWT 署名検証 |
+| `isTokenExpiringSoon(payload, threshold)` | jwt.ts | トークン期限切れ判定 |
+| `parseCookies(headers)` | cookies.ts | Cookie ヘッダーのパース |
+| `generateTokenCookies(...)` | cookies.ts | トークン Cookie 生成 |
+| `getClearCookies()` | cookies.ts | 全 Cookie クリア |
+| `getStateCookie(state)` | cookies.ts | State Cookie 生成 |
+| `getClearStateCookie()` | cookies.ts | State Cookie クリア |
+| `exchangeCodeForTokens(...)` | token.ts | 認可コード→トークン交換 |
+| `refreshTokens(...)` | token.ts | トークンリフレッシュ |
+| `parseQueryString(querystring)` | query.ts | クエリ文字列パース |
+
+#### モジュール依存関係
+
+```
+index.ts (re-exports all)
+├── constants.ts (no deps)
+├── config.ts (no deps)
+├── types.ts (aws-lambda)
+├── http.ts (https)
+├── jwt.ts → http.ts, constants.ts
+├── cookies.ts → types.ts, constants.ts
+├── cognito.ts → config.ts, types.ts, constants.ts
+├── token.ts → http.ts, types.ts
+├── query.ts (no deps)
+└── response.ts → cognito.ts, cookies.ts
+```
+
+**注意**: `response.ts` は `cognito.ts` と `cookies.ts` をインポートするため、循環依存に注意。
+
+#### tsconfig.json のパス解決
+
+開発時は `../shared` を、ビルド時は `./shared`（コピー済み）を参照：
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "./shared": ["../shared"],
+      "./shared/*": ["../shared/*"]
+    }
+  }
+}
+```
+
+## ビルド
+
+### 統一ビルドスクリプト (lambda/build.sh)
 
 ```bash
-# Create test user
-POOL_ID=$(terraform output -raw cognito_user_pool_id)
-aws cognito-idp admin-create-user \
-  --user-pool-id $POOL_ID \
-  --username your@email.com \
-  --user-attributes Name=email,Value=your@email.com Name=email_verified,Value=true \
-  --temporary-password "TempPass123!"
-
-# Upload test content
-BUCKET=$(terraform output -raw content_bucket_name)
-aws s3 cp test.jpg s3://$BUCKET/
-
-# Access via browser
-# https://<cloudfront-domain>/test.jpg
+cd lambda && ./build.sh           # 全関数ビルド
+cd lambda && ./build.sh auth-check  # 個別ビルド
 ```
 
-## Important Notes
+### Terraform 用ビルド (build-lambdas.sh)
 
-- Lambda@Edge functions MUST be deployed to `us-east-1` (handled automatically)
-- Deployment requires two passes: initial deploy, then update with CloudFront domain
-- Lambda@Edge replica deletion can take up to 1 hour during destroy
-- S3 bucket is completely private; access only via CloudFront with OAC
-- JWT tokens are validated using Cognito JWKS
-- Cookies are set with HttpOnly, Secure, and SameSite attributes
-- CSRF protection via state parameter in OAuth flow
-- CloudFront caching is disabled (TTL=0) for authenticated content
-- For custom domains, provide `acm_certificate_arn` (must be in us-east-1) and `domain_aliases`
+設定値を引数で渡して注入：
+
+```bash
+./build-lambdas.sh "$REGION" "$POOL_ID" "$CLIENT_ID" "$CLIENT_SECRET" "$COGNITO_DOMAIN" "$CF_DOMAIN"
+```
+
+### CLI 経由
+
+```bash
+./script.sh edge-build
+```
+
+## 関連リソース
+
+### Cognito モジュール
+
+```
+iac/modules/cognito/     # 再利用可能な Cognito モジュール
+```
+
+### CLI ヘルパーライブラリ
+
+```
+cli/lib/
+├── common.sh           # 共通ユーティリティ
+└── cloudfront-helpers.sh  # CloudFront ヘルパー
+```
+
+## よくある変更パターン
+
+### 新しい Cookie の追加
+
+1. `lambda/shared/constants.ts` に Cookie 名を追加
+2. `lambda/shared/cookies.ts` に生成/クリア関数を追加
+3. 必要な Lambda で使用
+
+### JWT 検証ロジックの変更
+
+1. `lambda/shared/jwt.ts` の `verifyToken` 関数を修正
+2. 全 Lambda で自動的に反映（shared 経由）
+
+### ログインリダイレクトの変更
+
+1. `lambda/shared/response.ts` の `createLoginRedirect()` を修正
+2. auth-check、auth-refresh 両方に反映
+
+### Terraform 変数の追加
+
+1. `variables.tf` に変数定義を追加
+2. `terraform.tfvars.example` にサンプル値を追加
+3. `main.tf` で使用
+
+### 新しい Lambda@Edge エンドポイントの追加
+
+1. `lambda/` に新しいディレクトリを作成
+2. `index.ts`, `package.json`, `tsconfig.json` を作成
+3. `lambda/build.sh` の `FUNCTIONS` リストに追加
+4. `main.tf` に Lambda リソースと CloudFront ビヘイビアを追加
+5. `script.sh` の CloudFront 設定に追加
+
+### URL 生成の変更
+
+1. `lambda/shared/cognito.ts` の `getFullUrl()` を修正
+2. auth-callback、auth-refresh 両方に反映
+
+## Lambda ハンドラーのパターン
+
+### 認証失敗時のリダイレクト
+
+```typescript
+// Cookie をクリアせずにログインへ
+return createLoginRedirect(uri);
+
+// Cookie をクリアしてログインへ（トークン検証失敗時）
+return createLoginRedirect(uri, true);
+```
+
+### 成功時のリダイレクト
+
+```typescript
+// CloudFront 完全 URL でリダイレクト
+return createRedirectResponse(getFullUrl(redirectUri), tokenCookies);
+```
+
+### ログアウト処理
+
+```typescript
+return createRedirectResponse(getLogoutUrl(), getClearCookies());
+```
+
+## テスト
+
+### ローカルビルドテスト
+
+```bash
+cd lambda && ./build.sh
+```
+
+### Terraform 検証
+
+```bash
+terraform fmt -check
+terraform validate
+terraform plan
+```
+
+### 認証フローテスト
+
+```bash
+./script.sh test-auth https://<cloudfront-domain>
+```
+
+### Lambda ログ確認
+
+```bash
+aws logs tail "/aws/lambda/us-east-1.<stack-name>-auth-check" \
+  --follow --region us-east-1
+```
+
+## 注意事項
+
+### Lambda@Edge の制約
+
+- **リージョン**: 必ず us-east-1 にデプロイ
+- **タイムアウト**: viewer-request は最大 5 秒
+- **メモリ**: viewer-request は最大 128 MB
+- **環境変数**: 使用不可（config.ts で対応）
+
+### セキュリティ
+
+- Cookie は必ず `HttpOnly`, `Secure` を設定
+- State パラメータで CSRF 対策
+- JWT は必ず署名を検証
+- Client Secret は Git にコミットしない（terraform.tfvars は gitignore）
+
+### デプロイ
+
+- CloudFront デプロイには数分〜15分
+- Lambda@Edge 削除には最大1時間
+- 設定変更後は `cf-invalidate` でキャッシュ無効化
+
+## トラブルシューティング
+
+### TypeScript エラー: Cannot find module './shared'
+
+IDE で発生する場合、TypeScript サーバーを再起動：
+- VSCode: `Cmd/Ctrl+Shift+P` → "TypeScript: Restart TS Server"
+
+### ビルドエラー
+
+```bash
+rm -rf lambda/*/dist lambda/*/node_modules
+cd lambda && ./build.sh
+```
+
+### 認証ループ
+
+1. Cognito callback URL を確認
+2. CloudFront ドメインと一致しているか確認
+3. Lambda のログでエラーを確認

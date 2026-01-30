@@ -5,7 +5,6 @@
 
 import { CloudFrontRequestEvent, CloudFrontRequestResult } from 'aws-lambda';
 import {
-  CONFIG,
   COOKIE_NAMES,
   getClientSecret,
   parseCookies,
@@ -16,7 +15,9 @@ import {
   createErrorResponse,
   decodeState,
   getCallbackUrl,
+  getFullUrl,
   exchangeCodeForTokens,
+  CONFIG,
 } from './shared';
 
 export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFrontRequestResult> => {
@@ -83,7 +84,7 @@ export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFront
     const redirectTo = stateData.uri || '/';
     console.log(`Redirecting to: ${redirectTo}`);
 
-    return createRedirectResponse(`https://${CONFIG.CLOUDFRONT_DOMAIN}${redirectTo}`, tokenCookies);
+    return createRedirectResponse(getFullUrl(redirectTo), tokenCookies);
   } catch (err) {
     console.error(`Token exchange failed: ${err}`);
     return createErrorResponse('Failed to complete authentication');
