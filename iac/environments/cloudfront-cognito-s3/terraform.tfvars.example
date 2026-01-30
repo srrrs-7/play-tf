@@ -1,0 +1,71 @@
+# =============================================================================
+# 基本設定
+# =============================================================================
+
+project_name = "myapp"
+environment  = "dev"
+aws_region   = "ap-northeast-1"
+
+# =============================================================================
+# Cognito 設定
+# =============================================================================
+
+# Cognito Hosted UI ドメインプレフィックス（グローバルで一意である必要あり）
+cognito_domain_prefix = "myapp-dev-auth"
+
+# MFA設定 (OFF, ON, OPTIONAL)
+mfa_configuration = "OFF"
+
+# パスワードポリシー
+password_policy = {
+  minimum_length    = 8
+  require_lowercase = true
+  require_uppercase = true
+  require_numbers   = true
+  require_symbols   = false
+}
+
+# コールバックURL（初回デプロイ後に CloudFront ドメインで更新）
+cognito_callback_urls = ["https://localhost/auth/callback"]
+cognito_logout_urls   = ["https://localhost/"]
+
+# トークン有効期間
+access_token_validity_hours  = 1
+id_token_validity_hours      = 1
+refresh_token_validity_days  = 30
+
+# =============================================================================
+# S3 設定
+# =============================================================================
+
+enable_s3_versioning = true
+
+# ライフサイクルルール（オプション）
+# s3_lifecycle_rules = [
+#   {
+#     id      = "archive-old-versions"
+#     enabled = true
+#     noncurrent_version_expiration_days = 90
+#   }
+# ]
+
+# =============================================================================
+# CloudFront 設定
+# =============================================================================
+
+default_root_object     = "index.html"
+cloudfront_price_class  = "PriceClass_200"
+
+# 地理的制限（オプション）
+geo_restriction_type      = "none"
+# geo_restriction_locations = ["JP"]  # whitelist/blacklist 使用時
+
+# カスタムドメイン（オプション）
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxx"
+# domain_aliases      = ["content.example.com"]
+
+# =============================================================================
+# ログ設定
+# =============================================================================
+
+log_retention_days = 30

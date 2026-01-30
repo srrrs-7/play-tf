@@ -1,0 +1,19 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+terraform.tfvars
+
+# Build artifacts
+builds/
+lambda/*/dist/
+lambda/*/node_modules/
+lambda/*/function.zip
+lambda/*/bun.lock
+lambda/*/bun.lockb
+
+# Copied shared modules (during build)
+lambda/auth-check/shared/
+lambda/auth-callback/shared/
+lambda/auth-refresh/shared/
